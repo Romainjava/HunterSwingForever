@@ -1,0 +1,495 @@
+-- Hunter Swing Forever by Illusion
+-- Unit 2: the swing / shot timing model, movement tracking, latency, calibration and shot log.
+local ADDON, ns = ...
+
+local T = {
+	NEED = 0.5,
+	SPELL_ID = 75,
+	LATENCY_CAP = 0.25,
+	MIN_WINDOW = 0.1,
+	CALIB_MAX = 9,
+	CALIB_MIN = 3,
+	SAMPLE_MIN = 0.15,
+	SAMPLE_MAX = 1.2,
+	HELD_UP = 1.2,
+	MAX_SWING = 10,
+	MELEE_GRACE = 0.5,
+	LOG_MAX = 40,
+	GAPS_MAX = 10,
+	DEMO_CYCLE = 3.0,
+}
+ns.T = T
+
+ns.latency = 0
+
+local move = {
+	known = false,
+	moving = false,
+	stillSince = 0,
+	events = 0,
+	source = "nothing",
+}
+ns.move = move
+
+local timing = {
+	lastShot = nil,
+	speed = nil,
+	running = false,
+	autoRepeat = false,
+	lastMelee = nil,
+	meleeSpeed = nil,
+	meleeAuto = false,
+	broken = false,
+	heldUp = false,
+	moved = false,
+	haste = {},
+	eventsAtShot = 0,
+	gaps = {},
+}
+ns.timing = timing
+
+local nextPing = 0
+
+local function Round3(value)
+	if type(value) ~= "number" then
+		return nil
+	end
+	return math.floor(value * 1000 + 0.5) / 1000
+end
+
+---------------------------------------------------------------------------
+-- Movement
+---------------------------------------------------------------------------
+
+function ns.ResetMovement(now)
+	move.moving = false
+	move.stillSince = now
+	if move.events == 0 and not move.known then
+		move.source = "nothing"
+	end
+end
+
+function ns.OnMovementEvent(isMoving, now)
+	move.events = move.events + 1
+	move.known = true
+	move.source = "events"
+	move.moving = isMoving and true or false
+	if not move.moving then
+		move.stillSince = now
+	end
+	if move.moving and timing.lastShot then
+		timing.moved = true
+	end
+end
+
+function ns.PollMovement(now)
+	if move.events > 0 then
+		move.known = true
+		move.source = "events"
+		return
+	end
+
+	local speedOK, speed = ns.SafeCall(GetUnitSpeed, "player")
+	local fallOK, falling = ns.SafeCall(IsFalling)
+
+	local plainSpeed = speedOK and ns.PlainNumber(speed) or nil
+	local plainFalling = fallOK and ns.PlainTrue(falling) or nil
+
+	if plainSpeed == nil and plainFalling == nil then
+		move.source = "nothing"
+		return
+	end
+
+	local isMoving = (plainSpeed ~= nil and plainSpeed > 0) or plainFalling == true
+	move.known = true
+	move.source = "speed"
+	if isMoving ~= move.moving then
+		move.moving = isMoving
+		if not isMoving then
+			move.stillSince = now
+		end
+	end
+end
+
+function ns.MovementKnown()
+	return move.known
+end
+
+---------------------------------------------------------------------------
+-- Latency
+---------------------------------------------------------------------------
+
+function ns.UpdateLatency(now)
+	if now < nextPing then
+		return
+	end
+	nextPing = now + 5
+	local ok, _, _, _, home, world = ns.SafeCall(GetNetStats)
+	if not ok then
+		return
+	end
+	local ms = ns.PlainNumber(world)
+	if ms == nil then
+		ms = ns.PlainNumber(home)
+	end
+	if ms ~= nil and ms >= 0 then
+		ns.latency = math.min(ms / 1000, T.LATENCY_CAP)
+	end
+end
+
+---------------------------------------------------------------------------
+-- The stand-still window and the learned stand-still time
+---------------------------------------------------------------------------
+
+function ns.Window()
+	local extra = (ns.db and ns.db.windowExtra or 0) / 1000
+	local ping = (ns.db and ns.db.addPing) and ns.latency or 0
+	return math.max(T.MIN_WINDOW, T.NEED + ping + extra)
+end
+
+function ns.MedianStand()
+	local list = ns.db and ns.db.calib and ns.db.calib.stand or {}
+	local count = #list
+	local newest = list[count]
+	local cache = ns.medianCache
+	if cache and cache.count == count and cache.newest == newest then
+		return cache.value
+	end
+
+	local sorted = {}
+	for index = 1, count do
+		sorted[index] = list[index]
+	end
+	table.sort(sorted)
+
+	local value
+	if count == 0 then
+		value = nil
+	elseif count % 2 == 1 then
+		value = sorted[(count + 1) / 2]
+	else
+		value = (sorted[count / 2] + sorted[count / 2 + 1]) / 2
+	end
+	ns.medianCache = { count = count, newest = newest, value = value }
+	return value
+end
+
+function ns.Need(demo)
+	if demo then
+		return ns.Window(), false, 0
+	end
+	local samples = ns.db and ns.db.calib and ns.db.calib.stand or {}
+	local count = #samples
+	if count >= T.CALIB_MIN then
+		local median = ns.MedianStand()
+		if median then
+			local extra = (ns.db.windowExtra or 0) / 1000
+			return math.max(T.MIN_WINDOW, median + extra), true, count
+		end
+	end
+	return ns.Window(), false, count
+end
+
+---------------------------------------------------------------------------
+-- The phase of the current swing (SPEC 7.2)
+---------------------------------------------------------------------------
+
+function ns.Phase(now, demo)
+	local cycle
+	local need
+	if demo then
+		cycle = T.DEMO_CYCLE
+		need = ns.Window()
+	else
+		cycle = timing.speed
+		need = ns.Need()
+	end
+	if not cycle or cycle <= 0 then
+		return nil
+	end
+
+	local stand = math.min(need, cycle)
+	local moveUntil = cycle - stand
+	local elapsed
+	if demo then
+		elapsed = now - (now - now % cycle)
+	else
+		elapsed = now - (timing.lastShot or now)
+	end
+
+	local info = {
+		cycle = cycle,
+		need = need,
+		stand = stand,
+		moveUntil = moveUntil,
+		elapsed = elapsed,
+	}
+	if elapsed < moveUntil then
+		info.phase = "move"
+		info.fill = elapsed / cycle
+		info.left = moveUntil - elapsed
+	elseif elapsed < cycle then
+		info.phase = "stand"
+		info.fill = elapsed / cycle
+		info.left = cycle - elapsed
+	else
+		info.phase = "late"
+		info.fill = 1
+		info.left = 0
+	end
+	return info
+end
+
+-- When the shot actually fires, and when the stand-still began (SPEC 7.6).
+function ns.StandStill(now, cycle, need, demo)
+	if demo then
+		return nil
+	end
+	if not move.known or move.moving or not move.stillSince then
+		return nil
+	end
+	local swingEnd = (timing.lastShot or now) + cycle
+	local stopBy = swingEnd - need
+	local shotTime, start
+	if move.stillSince <= stopBy then
+		shotTime = swingEnd
+		start = stopBy
+	else
+		shotTime = move.stillSince + need
+		start = move.stillSince
+	end
+	local left = shotTime - now
+	local progress
+	if shotTime - start <= 0 then
+		progress = 1
+	else
+		progress = math.max(0, math.min(1, (now - start) / (shotTime - start)))
+	end
+	return shotTime, start, left, progress
+end
+
+---------------------------------------------------------------------------
+-- Inputs
+---------------------------------------------------------------------------
+
+local function KnownCode()
+	if move.events > 0 then
+		return 2
+	end
+	if move.known then
+		return 1
+	end
+	return 0
+end
+
+local function AppendShotLog(row)
+	local log = ns.db.shotLog
+	log[#log + 1] = row
+	while #log > T.LOG_MAX do
+		table.remove(log, 1)
+	end
+end
+
+function ns.OnRangedSwing(duration)
+	local db = ns.db
+	if not db then
+		return
+	end
+	local now = GetTime()
+	local reported = ns.PlainNumber(duration)
+	local speed = timing.speed
+	if reported and reported > 0 and reported <= T.MAX_SWING then
+		speed = reported
+	end
+
+	-- A shot can not fire while moving: heal a stop event the client swallowed.
+	if timing.lastShot and move.moving and move.known and move.events == timing.eventsAtShot then
+		move.moving = false
+		move.stillSince = now
+		timing.moved = true
+	end
+
+	local previous = timing.lastShot
+	local previousSpeed = timing.speed
+	local gap = previous and (now - previous) or nil
+
+	-- Learn from the swing that just ended (SPEC 7.5).
+	if previous and previousSpeed and not timing.broken and not timing.heldUp
+		and #timing.haste == 0 and not ns.demoActive
+		and move.known and not move.moving and move.stillSince and gap then
+		local need = ns.Need()
+		local stopBefore = (previous + previousSpeed) - move.stillSince
+		local measured = now - move.stillSince
+		if stopBefore < need and measured >= T.SAMPLE_MIN and measured <= T.SAMPLE_MAX then
+			local samples = db.calib.stand
+			samples[#samples + 1] = Round3(measured)
+			while #samples > T.CALIB_MAX do
+				table.remove(samples, 1)
+			end
+			ns.ResetMedian()
+		end
+	end
+
+	-- Gap memory for the /hsf timing report.
+	if gap then
+		timing.gaps[#timing.gaps + 1] = {
+			gap = gap,
+			speed = previousSpeed,
+			moved = timing.moved,
+			haste = #timing.haste > 0,
+			broken = timing.broken,
+		}
+		while #timing.gaps > T.GAPS_MAX do
+			table.remove(timing.gaps, 1)
+		end
+	end
+
+	local still
+	if move.moving then
+		still = -1
+	else
+		still = Round3(now - (move.stillSince or now))
+	end
+
+	AppendShotLog({
+		t = Round3(now),
+		speed = Round3(speed or 0),
+		ping = math.floor(ns.latency * 1000 + 0.5),
+		known = KnownCode(),
+		gap = gap and Round3(gap) or nil,
+		prev = previousSpeed and Round3(previousSpeed) or nil,
+		afterSwing = (gap and previousSpeed) and Round3(gap - previousSpeed) or nil,
+		broken = timing.broken and 1 or 0,
+		moved = timing.moved and 1 or 0,
+		haste = table.concat(timing.haste, ","),
+		still = still,
+	})
+
+	timing.lastShot = now
+	if speed then
+		timing.speed = speed
+	end
+	timing.running = true
+	timing.broken = false
+	timing.heldUp = false
+	timing.moved = false
+	timing.haste = {}
+	timing.eventsAtShot = move.events
+end
+
+function ns.OnMeleeSwing(duration)
+	local now = GetTime()
+	timing.lastMelee = now
+	local reported = ns.PlainNumber(duration)
+	if reported and reported > 0 and reported <= T.MAX_SWING then
+		timing.meleeSpeed = reported
+	end
+	timing.broken = true
+end
+
+function ns.SetAutoRepeat(running)
+	timing.running = running and true or false
+	timing.autoRepeat = timing.running
+	if timing.running then
+		timing.broken = true
+	end
+end
+
+function ns.SetMeleeAuto(running)
+	timing.meleeAuto = running and true or false
+end
+
+function ns.OnAttackSpeedChange(kind)
+	if not timing.lastShot then
+		return
+	end
+	if #timing.haste >= 6 then
+		return
+	end
+	local since = GetTime() - timing.lastShot
+	timing.haste[#timing.haste + 1] = kind .. string.format("%.3f", since)
+end
+
+function ns.MeleeActive(now)
+	if timing.lastMelee then
+		local speed = timing.meleeSpeed or 2
+		if now - timing.lastMelee < speed + T.MELEE_GRACE
+			and (not timing.lastShot or timing.lastMelee > timing.lastShot) then
+			return true
+		end
+		return false
+	end
+	if timing.meleeAuto and not timing.autoRepeat and ns.range and ns.range.held == "close" then
+		return true
+	end
+	return false
+end
+
+---------------------------------------------------------------------------
+-- Reports (SPEC 4.2, 4.3)
+---------------------------------------------------------------------------
+
+function ns.ReportMovement()
+	ns.Print("Movement (run it standing, then while running):")
+	ns.PrintLine("GetUnitSpeed = " .. ns.DescribeCall(GetUnitSpeed, "player"))
+	ns.PrintLine("IsFalling = " .. ns.DescribeCall(IsFalling))
+	ns.PrintLine(string.format("movement events seen = %d", move.events))
+	local using
+	if move.events > 0 then
+		using = "events"
+	elseif move.known then
+		using = "speed"
+	else
+		using = "nothing (the bar goes by the swing time alone)"
+	end
+	ns.PrintLine("using = " .. using)
+	local state = "unknown"
+	if move.known then
+		state = move.moving and "moving" or "standing still"
+	end
+	ns.PrintLine("you are " .. state)
+end
+
+function ns.ReportTiming()
+	ns.Print("Auto Shot timing (stand still and shoot first):")
+
+	local usable = {}
+	for index, entry in ipairs(timing.gaps) do
+		local over = math.floor((entry.gap - entry.speed) * 100 + 0.5) / 100
+		local why = ""
+		if entry.moved then
+			why = " - you moved, left out"
+		elseif over > T.HELD_UP then
+			why = " - held up, left out"
+		end
+		ns.PrintLine(string.format("%d. %.2f s apart, speed %.2f s (%+.2f s)%s", index, entry.gap, entry.speed, over, why))
+		if not entry.moved and not entry.haste and not entry.broken and over <= T.HELD_UP then
+			usable[#usable + 1] = over
+		end
+	end
+
+	local samples = ns.db.calib.stand
+	local count = #samples
+	if count >= T.CALIB_MIN then
+		local median = ns.MedianStand() or 0
+		ns.PrintLine(string.format("Measured stand-still time: %.2f s (from %d shots where you stopped late).", median, count))
+	else
+		ns.PrintLine(string.format("Stand-still time not measured yet (%d of %d shots): stop after a swing ends and let the shot go. Using %.2f s.", count, T.CALIB_MIN, ns.Window()))
+	end
+
+	if #usable < 3 then
+		ns.Print("Not enough shots yet: stand still and let Auto Shot fire 6 times, then type /hsf timing.")
+		return
+	end
+
+	local sum = 0
+	for _, over in ipairs(usable) do
+		sum = sum + over
+	end
+	local mean = sum / #usable
+	if mean < 0.15 then
+		ns.Print(string.format("Shots come %.2f s after the speed on average: the stand-still fits inside the swing.", mean))
+	else
+		ns.Print(string.format("Shots come %.2f s after the speed on average: the stand-still is added to the swing.", mean))
+	end
+end

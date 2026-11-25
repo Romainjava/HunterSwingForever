@@ -1,0 +1,20 @@
+## Interface: 16001
+## Title: Hunter Swing Forever by Illusion
+## Notes: Auto Shot bar: when you can move, and when to stand still for the next shot. Ammo vendors on the world map and minimap. /hsf
+## Notes-frFR: Barre d'Auto Shot : quand bouger et quand rester immobile pour le prochain tir. Vendeurs de munitions sur la carte du monde et sur la minicarte. /hsf
+## Author: Illusion (Romainjava)
+## IconTexture: Interface\AddOns\HunterSwingForever\Icon.tga
+## Version: 1.0.0
+## SavedVariables: HunterSwingForeverDB
+## X-Category: Hunter
+
+Defaults.lua
+Timing.lua
+Distance.lua
+Shots.lua
+Ammo.lua
+VendorData.lua
+Pins.lua
+Pins.xml
+Bar.lua
+Options.lua

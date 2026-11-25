@@ -1,0 +1,3 @@
+*.orig
+*.bak
+node_modules/

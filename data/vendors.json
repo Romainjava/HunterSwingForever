@@ -1,0 +1,2220 @@
+{
+  "maps": {
+    "1411": "Durotar",
+    "1412": "Mulgore",
+    "1413": "The Barrens",
+    "1416": "Alterac Mountains",
+    "1417": "Arathi Highlands",
+    "1418": "Badlands",
+    "1420": "Tirisfal Glades",
+    "1421": "Silverpine Forest",
+    "1423": "Eastern Plaguelands",
+    "1424": "Hillsbrad Foothills",
+    "1425": "The Hinterlands",
+    "1426": "Dun Morogh",
+    "1427": "Searing Gorge",
+    "1429": "Elwynn Forest",
+    "1431": "Duskwood",
+    "1432": "Loch Modan",
+    "1433": "Redridge Mountains",
+    "1434": "Stranglethorn Vale",
+    "1436": "Westfall",
+    "1437": "Wetlands",
+    "1438": "Teldrassil",
+    "1439": "Darkshore",
+    "1440": "Ashenvale",
+    "1441": "Thousand Needles",
+    "1442": "Stonetalon Mountains",
+    "1443": "Desolace",
+    "1444": "Feralas",
+    "1445": "Dustwallow Marsh",
+    "1446": "Tanaris",
+    "1447": "Azshara",
+    "1448": "Felwood",
+    "1449": "Un'Goro Crater",
+    "1450": "Moonglade",
+    "1451": "Silithus",
+    "1452": "Winterspring",
+    "1453": "Stormwind City",
+    "1454": "Orgrimmar",
+    "1455": "Ironforge",
+    "1456": "Thunder Bluff",
+    "1457": "Darnassus",
+    "1458": "Undercity",
+    "1459": "Alterac Valley",
+    "2482": "Mount Hyjal",
+    "2521": "Zephras Isle",
+    "2548": "Riverglades"
+  },
+  "items": [
+    {
+      "id": 2512,
+      "name": "Rough Arrow",
+      "kind": "arrow",
+      "requiredLevel": 1
+    },
+    {
+      "id": 2515,
+      "name": "Sharp Arrow",
+      "kind": "arrow",
+      "requiredLevel": 10
+    },
+    {
+      "id": 2516,
+      "name": "Light Shot",
+      "kind": "bullet",
+      "requiredLevel": 1
+    },
+    {
+      "id": 2519,
+      "name": "Heavy Shot",
+      "kind": "bullet",
+      "requiredLevel": 10
+    },
+    {
+      "id": 3030,
+      "name": "Razor Arrow",
+      "kind": "arrow",
+      "requiredLevel": 25
+    },
+    {
+      "id": 3033,
+      "name": "Solid Shot",
+      "kind": "bullet",
+      "requiredLevel": 25
+    },
+    {
+      "id": 11284,
+      "name": "Accurate Slugs",
+      "kind": "bullet",
+      "requiredLevel": 40
+    },
+    {
+      "id": 11285,
+      "name": "Jagged Arrow",
+      "kind": "arrow",
+      "requiredLevel": 40
+    },
+    {
+      "id": 19316,
+      "name": "Ice Threaded Arrow",
+      "kind": "arrow",
+      "requiredLevel": 51
+    },
+    {
+      "id": 19317,
+      "name": "Ice Threaded Bullet",
+      "kind": "bullet",
+      "requiredLevel": 51
+    }
+  ],
+  "vendors": [
+    {
+      "npc": 3158,
+      "name": "Duokna",
+      "faction": "H",
+      "mapId": 1411,
+      "x": 0.426,
+      "y": 0.674,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3164,
+      "name": "Jark",
+      "faction": "H",
+      "mapId": 1411,
+      "x": 0.543,
+      "y": 0.422,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3165,
+      "name": "Ghrawt",
+      "faction": "H",
+      "mapId": 1411,
+      "x": 0.529,
+      "y": 0.409,
+      "items": [
+        2512,
+        2515
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3186,
+      "name": "K'waii",
+      "faction": "H",
+      "mapId": 1411,
+      "x": 0.563,
+      "y": 0.735,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 10369,
+      "name": "Trayexir",
+      "faction": "H",
+      "mapId": 1411,
+      "x": 0.564,
+      "y": 0.73,
+      "items": [
+        2512,
+        2515
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3072,
+      "name": "Kawnie Softbreeze",
+      "faction": "H",
+      "mapId": 1412,
+      "x": 0.447,
+      "y": 0.771,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3076,
+      "name": "Moorat Longstride",
+      "faction": "H",
+      "mapId": 1412,
+      "x": 0.452,
+      "y": 0.614,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3078,
+      "name": "Kennah Hawkseye",
+      "faction": "H",
+      "mapId": 1412,
+      "x": 0.45,
+      "y": 0.619,
+      "items": [
+        2516,
+        2519
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 3481,
+      "name": "Barg",
+      "faction": "H",
+      "mapId": 1413,
+      "x": 0.516,
+      "y": 0.3,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3488,
+      "name": "Uthrok",
+      "faction": "H",
+      "mapId": 1413,
+      "x": 0.511,
+      "y": 0.291,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3498,
+      "name": "Jazzik",
+      "faction": "N",
+      "mapId": 1413,
+      "x": 0.619,
+      "y": 0.388,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 9552,
+      "name": "Zanara",
+      "faction": "H",
+      "mapId": 1413,
+      "x": 0.539,
+      "y": 0.696,
+      "items": [
+        2512,
+        2515,
+        3030,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 2401,
+      "name": "Kayren Soothallow",
+      "faction": "H",
+      "mapId": 1416,
+      "x": 0.614,
+      "y": 0.817,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 13217,
+      "name": "Thanthaldis Snowgleam",
+      "faction": "A",
+      "mapId": 1416,
+      "x": 0.394,
+      "y": 0.818,
+      "items": [
+        19316,
+        19317
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 13219,
+      "name": "Jekyll Flandring",
+      "faction": "H",
+      "mapId": 1416,
+      "x": 0.627,
+      "y": 0.593,
+      "items": [
+        19316,
+        19317
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 28989,
+      "name": "Aemara",
+      "faction": "N",
+      "mapId": 1416,
+      "x": 0.17,
+      "y": 0.715,
+      "items": [
+        2512,
+        2515,
+        3030
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 2808,
+      "name": "Vikki Lonsav",
+      "faction": "A",
+      "mapId": 1417,
+      "x": 0.464,
+      "y": 0.474,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 2820,
+      "name": "Graud",
+      "faction": "H",
+      "mapId": 1417,
+      "x": 0.74,
+      "y": 0.325,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 9555,
+      "name": "Mu'uta",
+      "faction": "H",
+      "mapId": 1417,
+      "x": 0.725,
+      "y": 0.335,
+      "items": [
+        2512,
+        2515,
+        3030,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 2908,
+      "name": "Grawl",
+      "faction": "H",
+      "mapId": 1418,
+      "x": 0.03,
+      "y": 0.461,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 2115,
+      "name": "Joshua Kien",
+      "faction": "H",
+      "mapId": 1420,
+      "x": 0.322,
+      "y": 0.656,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 2134,
+      "name": "Mrs. Winters",
+      "faction": "H",
+      "mapId": 1420,
+      "x": 0.61,
+      "y": 0.526,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 2140,
+      "name": "Edwin Harly",
+      "faction": "H",
+      "mapId": 1421,
+      "x": 0.439,
+      "y": 0.399,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 9553,
+      "name": "Nadia Vernon",
+      "faction": "H",
+      "mapId": 1421,
+      "x": 0.449,
+      "y": 0.394,
+      "items": [
+        2512,
+        2515
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 11038,
+      "name": "Caretaker Alen",
+      "faction": "N",
+      "mapId": 1423,
+      "x": 0.699,
+      "y": 0.537,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 2401,
+      "name": "Kayren Soothallow",
+      "faction": "H",
+      "mapId": 1424,
+      "x": 0.624,
+      "y": 0.199,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3541,
+      "name": "Sarah Raycroft",
+      "faction": "A",
+      "mapId": 1424,
+      "x": 0.49,
+      "y": 0.551,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 13217,
+      "name": "Thanthaldis Snowgleam",
+      "faction": "A",
+      "mapId": 1424,
+      "x": 0.434,
+      "y": 0.199,
+      "items": [
+        19316,
+        19317
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 17598,
+      "name": "Renn'az",
+      "faction": "H",
+      "mapId": 1425,
+      "x": 0.769,
+      "y": 0.814,
+      "items": [
+        2512,
+        2515,
+        3030
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 829,
+      "name": "Adlin Pridedrift",
+      "faction": "A",
+      "mapId": 1426,
+      "x": 0.3,
+      "y": 0.715,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 1243,
+      "name": "Hegnar Rumbleshot",
+      "faction": "A",
+      "mapId": 1426,
+      "x": 0.406,
+      "y": 0.651,
+      "items": [
+        2516,
+        2519
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 1691,
+      "name": "Kreg Bilmn",
+      "faction": "A",
+      "mapId": 1426,
+      "x": 0.472,
+      "y": 0.525,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 2908,
+      "name": "Grawl",
+      "faction": "H",
+      "mapId": 1427,
+      "x": 0.822,
+      "y": 0.371,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 14624,
+      "name": "Master Smith Burninate",
+      "faction": "N",
+      "mapId": 1427,
+      "x": 0.385,
+      "y": 0.286,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 151,
+      "name": "Brog Hamfist",
+      "faction": "A",
+      "mapId": 1429,
+      "x": 0.438,
+      "y": 0.659,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 152,
+      "name": "Brother Danil",
+      "faction": "A",
+      "mapId": 1429,
+      "x": 0.474,
+      "y": 0.416,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 1198,
+      "name": "Rallic Finn",
+      "faction": "A",
+      "mapId": 1429,
+      "x": 0.832,
+      "y": 0.661,
+      "items": [
+        2512,
+        2515
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 1250,
+      "name": "Drake Lindgren",
+      "faction": "A",
+      "mapId": 1429,
+      "x": 0.832,
+      "y": 0.666,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 268238,
+      "name": "Nordun Steadysight",
+      "faction": "A",
+      "mapId": 1429,
+      "x": 0.42,
+      "y": 0.665,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 227,
+      "name": "Mabel Solaj",
+      "faction": "A",
+      "mapId": 1431,
+      "x": 0.737,
+      "y": 0.452,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 228,
+      "name": "Avette Fellwood",
+      "faction": "A",
+      "mapId": 1431,
+      "x": 0.729,
+      "y": 0.443,
+      "items": [
+        2512,
+        2515,
+        3030,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 1469,
+      "name": "Vrok Blunderblast",
+      "faction": "A",
+      "mapId": 1432,
+      "x": 0.359,
+      "y": 0.436,
+      "items": [
+        2516,
+        2519
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 1682,
+      "name": "Yanni Stoutheart",
+      "faction": "A",
+      "mapId": 1432,
+      "x": 0.347,
+      "y": 0.486,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 1685,
+      "name": "Xandar Goodbeard",
+      "faction": "A",
+      "mapId": 1432,
+      "x": 0.824,
+      "y": 0.633,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 1686,
+      "name": "Irene Sureshot",
+      "faction": "A",
+      "mapId": 1432,
+      "x": 0.831,
+      "y": 0.632,
+      "items": [
+        2516,
+        2519,
+        3033
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 1687,
+      "name": "Cliff Hadin",
+      "faction": "A",
+      "mapId": 1432,
+      "x": 0.829,
+      "y": 0.629,
+      "items": [
+        2512,
+        2515
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 789,
+      "name": "Kimberly Hiett",
+      "faction": "A",
+      "mapId": 1433,
+      "x": 0.218,
+      "y": 0.453,
+      "items": [
+        2512,
+        2515,
+        3030
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 791,
+      "name": "Lindsay Ashlock",
+      "faction": "A",
+      "mapId": 1433,
+      "x": 0.235,
+      "y": 0.474,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3088,
+      "name": "Henry Chapal",
+      "faction": "A",
+      "mapId": 1433,
+      "x": 0.186,
+      "y": 0.414,
+      "items": [
+        2516,
+        2519,
+        3033
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 734,
+      "name": "Corporal Bluth",
+      "faction": "A",
+      "mapId": 1434,
+      "x": 0.379,
+      "y": 0.031,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 1149,
+      "name": "Uthok",
+      "faction": "H",
+      "mapId": 1434,
+      "x": 0.315,
+      "y": 0.28,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 2685,
+      "name": "Mazk Snipeshot",
+      "faction": "N",
+      "mapId": 1434,
+      "x": 0.284,
+      "y": 0.751,
+      "items": [
+        2516,
+        2519,
+        3033
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 2839,
+      "name": "Haren Kanmae",
+      "faction": "N",
+      "mapId": 1434,
+      "x": 0.282,
+      "y": 0.746,
+      "items": [
+        2512,
+        2515,
+        3030,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 491,
+      "name": "Quartermaster Lewis",
+      "faction": "A",
+      "mapId": 1436,
+      "x": 0.569,
+      "y": 0.472,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 1668,
+      "name": "William MacGregor",
+      "faction": "A",
+      "mapId": 1436,
+      "x": 0.576,
+      "y": 0.54,
+      "items": [
+        2512,
+        2515
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 1448,
+      "name": "Neal Allen",
+      "faction": "A",
+      "mapId": 1437,
+      "x": 0.107,
+      "y": 0.567,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 1452,
+      "name": "Gruham Rumdnul",
+      "faction": "A",
+      "mapId": 1437,
+      "x": 0.12,
+      "y": 0.579,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 1459,
+      "name": "Naela Trance",
+      "faction": "A",
+      "mapId": 1437,
+      "x": 0.112,
+      "y": 0.586,
+      "items": [
+        2512,
+        2515
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 1461,
+      "name": "Murndan Derth",
+      "faction": "A",
+      "mapId": 1437,
+      "x": 0.113,
+      "y": 0.595,
+      "items": [
+        2516,
+        2519,
+        3033,
+        11284
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 1462,
+      "name": "Edwina Monzor",
+      "faction": "A",
+      "mapId": 1437,
+      "x": 0.11,
+      "y": 0.582,
+      "items": [
+        2512,
+        2515,
+        3030
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3587,
+      "name": "Lyrai",
+      "faction": "A",
+      "mapId": 1438,
+      "x": 0.595,
+      "y": 0.409,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3589,
+      "name": "Keina",
+      "faction": "A",
+      "mapId": 1438,
+      "x": 0.593,
+      "y": 0.41,
+      "items": [
+        2512,
+        2515
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3608,
+      "name": "Aldia",
+      "faction": "A",
+      "mapId": 1438,
+      "x": 0.554,
+      "y": 0.572,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3610,
+      "name": "Jeena Featherbow",
+      "faction": "A",
+      "mapId": 1438,
+      "x": 0.559,
+      "y": 0.591,
+      "items": [
+        2512,
+        2515
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 2806,
+      "name": "Bale",
+      "faction": "H",
+      "mapId": 1439,
+      "x": 0.504,
+      "y": 0.742,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 4182,
+      "name": "Dalmond",
+      "faction": "A",
+      "mapId": 1439,
+      "x": 0.374,
+      "y": 0.405,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3951,
+      "name": "Bhaldaran Ravenshade",
+      "faction": "A",
+      "mapId": 1440,
+      "x": 0.502,
+      "y": 0.672,
+      "items": [
+        2512,
+        2515
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3962,
+      "name": "Haljan Oakheart",
+      "faction": "A",
+      "mapId": 1440,
+      "x": 0.349,
+      "y": 0.509,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 6028,
+      "name": "Burkrum",
+      "faction": "H",
+      "mapId": 1440,
+      "x": 0.735,
+      "y": 0.603,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519,
+        3030,
+        3033,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3053,
+      "name": "Synge",
+      "faction": "N",
+      "mapId": 1441,
+      "x": 0.804,
+      "y": 0.769,
+      "items": [
+        2516,
+        2519,
+        3033,
+        11284
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 4876,
+      "name": "Jawn Highmesa",
+      "faction": "H",
+      "mapId": 1441,
+      "x": 0.46,
+      "y": 0.514,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 9551,
+      "name": "Starn",
+      "faction": "H",
+      "mapId": 1441,
+      "x": 0.449,
+      "y": 0.505,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 4082,
+      "name": "Grawnal",
+      "faction": "H",
+      "mapId": 1442,
+      "x": 0.459,
+      "y": 0.587,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 4084,
+      "name": "Chylina",
+      "faction": "A",
+      "mapId": 1442,
+      "x": 0.355,
+      "y": 0.06,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 9549,
+      "name": "Borand",
+      "faction": "H",
+      "mapId": 1442,
+      "x": 0.453,
+      "y": 0.591,
+      "items": [
+        2512,
+        2515
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 12960,
+      "name": "Christi Galvanis",
+      "faction": "A",
+      "mapId": 1442,
+      "x": 0.411,
+      "y": 0.821,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 12027,
+      "name": "Tukk",
+      "faction": "H",
+      "mapId": 1443,
+      "x": 0.249,
+      "y": 0.717,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 12246,
+      "name": "Super-Seller 680",
+      "faction": "N",
+      "mapId": 1443,
+      "x": 0.405,
+      "y": 0.793,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 12960,
+      "name": "Christi Galvanis",
+      "faction": "A",
+      "mapId": 1443,
+      "x": 0.665,
+      "y": 0.069,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 7942,
+      "name": "Faralorn",
+      "faction": "A",
+      "mapId": 1444,
+      "x": 0.306,
+      "y": 0.434,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 9548,
+      "name": "Cawind Trueaim",
+      "faction": "H",
+      "mapId": 1444,
+      "x": 0.749,
+      "y": 0.457,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 4889,
+      "name": "Torq Ironblast",
+      "faction": "A",
+      "mapId": 1445,
+      "x": 0.674,
+      "y": 0.479,
+      "items": [
+        2516,
+        2519,
+        3033,
+        11284
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 4892,
+      "name": "Jensen Farran",
+      "faction": "A",
+      "mapId": 1445,
+      "x": 0.679,
+      "y": 0.499,
+      "items": [
+        2512,
+        2515,
+        3030,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 4896,
+      "name": "Charity Mipsy",
+      "faction": "A",
+      "mapId": 1445,
+      "x": 0.675,
+      "y": 0.517,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 9552,
+      "name": "Zanara",
+      "faction": "H",
+      "mapId": 1445,
+      "x": 0.355,
+      "y": 0.301,
+      "items": [
+        2512,
+        2515,
+        3030,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 8131,
+      "name": "Blizrik Buckshot",
+      "faction": "N",
+      "mapId": 1446,
+      "x": 0.508,
+      "y": 0.276,
+      "items": [
+        2516,
+        2519,
+        3033,
+        11284
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 8139,
+      "name": "Jabbey",
+      "faction": "N",
+      "mapId": 1446,
+      "x": 0.67,
+      "y": 0.22,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 14301,
+      "name": "Brinna Valanaar",
+      "faction": "A",
+      "mapId": 1447,
+      "x": 0.119,
+      "y": 0.783,
+      "items": [
+        2512,
+        2515,
+        3030,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 2803,
+      "name": "Malygen",
+      "faction": "A",
+      "mapId": 1448,
+      "x": 0.623,
+      "y": 0.256,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 2806,
+      "name": "Bale",
+      "faction": "H",
+      "mapId": 1448,
+      "x": 0.347,
+      "y": 0.531,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 11555,
+      "name": "Gorn One Eye",
+      "faction": "N",
+      "mapId": 1448,
+      "x": 0.652,
+      "y": 0.027,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow",
+      "note": "Needs Timbermaw Hold reputation"
+    },
+    {
+      "npc": 12959,
+      "name": "Nergal",
+      "faction": "N",
+      "mapId": 1449,
+      "x": 0.433,
+      "y": 0.079,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 12021,
+      "name": "Daeolyn Summerleaf",
+      "faction": "N",
+      "mapId": 1450,
+      "x": 0.451,
+      "y": 0.346,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 12029,
+      "name": "Narianna",
+      "faction": "N",
+      "mapId": 1450,
+      "x": 0.533,
+      "y": 0.427,
+      "items": [
+        2512,
+        2515,
+        3030
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 15174,
+      "name": "Calandrath",
+      "faction": "N",
+      "mapId": 1451,
+      "x": 0.519,
+      "y": 0.392,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 2084,
+      "name": "Natheril Raincaller",
+      "faction": "A",
+      "mapId": 1452,
+      "x": 0.515,
+      "y": 0.308,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 11184,
+      "name": "Wixxrak",
+      "faction": "N",
+      "mapId": 1452,
+      "x": 0.617,
+      "y": 0.38,
+      "items": [
+        2516,
+        2519,
+        3033,
+        11284
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 1285,
+      "name": "Thurman Mullby",
+      "faction": "A",
+      "mapId": 1453,
+      "x": 0.646,
+      "y": 0.72,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 1287,
+      "name": "Marda Weller",
+      "faction": "A",
+      "mapId": 1453,
+      "x": 0.639,
+      "y": 0.686,
+      "items": [
+        2512,
+        2515,
+        3030
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 1297,
+      "name": "Lina Stover",
+      "faction": "A",
+      "mapId": 1453,
+      "x": 0.586,
+      "y": 0.689,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519,
+        3030,
+        3033,
+        11284
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 1298,
+      "name": "Frederick Stover",
+      "faction": "A",
+      "mapId": 1453,
+      "x": 0.584,
+      "y": 0.69,
+      "items": [
+        2512,
+        2515,
+        3030,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 5510,
+      "name": "Thulman Flintcrag",
+      "faction": "A",
+      "mapId": 1453,
+      "x": 0.618,
+      "y": 0.363,
+      "items": [
+        2516,
+        2519
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 3313,
+      "name": "Trak'gen",
+      "faction": "H",
+      "mapId": 1454,
+      "x": 0.48,
+      "y": 0.804,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3322,
+      "name": "Kaja",
+      "faction": "H",
+      "mapId": 1454,
+      "x": 0.52,
+      "y": 0.625,
+      "items": [
+        2516,
+        2519,
+        3033,
+        11284
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 3350,
+      "name": "Asoran",
+      "faction": "H",
+      "mapId": 1454,
+      "x": 0.459,
+      "y": 0.407,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3409,
+      "name": "Zendo'jian",
+      "faction": "H",
+      "mapId": 1454,
+      "x": 0.811,
+      "y": 0.188,
+      "items": [
+        2512,
+        2515
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3410,
+      "name": "Jin'sora",
+      "faction": "H",
+      "mapId": 1454,
+      "x": 0.778,
+      "y": 0.387,
+      "items": [
+        2512,
+        2515,
+        3030,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 5101,
+      "name": "Bryllia Ironbrand",
+      "faction": "A",
+      "mapId": 1455,
+      "x": 0.386,
+      "y": 0.741,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 5122,
+      "name": "Skolmin Goldfury",
+      "faction": "A",
+      "mapId": 1455,
+      "x": 0.718,
+      "y": 0.667,
+      "items": [
+        2512,
+        2515,
+        3030,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 5123,
+      "name": "Bretta Goldfury",
+      "faction": "A",
+      "mapId": 1455,
+      "x": 0.722,
+      "y": 0.661,
+      "items": [
+        2516,
+        2519,
+        3033,
+        11284
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 7976,
+      "name": "Thalgus Thunderfist",
+      "faction": "A",
+      "mapId": 1455,
+      "x": 0.611,
+      "y": 0.892,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519,
+        3030
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 2997,
+      "name": "Jyn Stonehoof",
+      "faction": "H",
+      "mapId": 1456,
+      "x": 0.409,
+      "y": 0.624,
+      "items": [
+        2516,
+        2519
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 3015,
+      "name": "Kuna Thunderhorn",
+      "faction": "H",
+      "mapId": 1456,
+      "x": 0.465,
+      "y": 0.456,
+      "items": [
+        2512,
+        2515,
+        3030,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3018,
+      "name": "Hogor Thunderhoof",
+      "faction": "H",
+      "mapId": 1456,
+      "x": 0.554,
+      "y": 0.564,
+      "items": [
+        2516,
+        2519,
+        3033,
+        11284
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 8362,
+      "name": "Kuruk",
+      "faction": "H",
+      "mapId": 1456,
+      "x": 0.386,
+      "y": 0.642,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 4170,
+      "name": "Ellandrieth",
+      "faction": "A",
+      "mapId": 1457,
+      "x": 0.643,
+      "y": 0.53,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519,
+        3030,
+        3033
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 4173,
+      "name": "Landria",
+      "faction": "A",
+      "mapId": 1457,
+      "x": 0.633,
+      "y": 0.663,
+      "items": [
+        2512,
+        2515,
+        3030,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 4203,
+      "name": "Ariyell Skyshadow",
+      "faction": "A",
+      "mapId": 1457,
+      "x": 0.584,
+      "y": 0.446,
+      "items": [
+        2512,
+        2515
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 4241,
+      "name": "Mydrannul",
+      "faction": "A",
+      "mapId": 1457,
+      "x": 0.704,
+      "y": 0.45,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 4555,
+      "name": "Eleanor Rusk",
+      "faction": "H",
+      "mapId": 1458,
+      "x": 0.687,
+      "y": 0.49,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 4602,
+      "name": "Benijah Fenner",
+      "faction": "H",
+      "mapId": 1458,
+      "x": 0.583,
+      "y": 0.327,
+      "items": [
+        2512,
+        2515,
+        3030
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 4603,
+      "name": "Nicholas Atwood",
+      "faction": "H",
+      "mapId": 1458,
+      "x": 0.622,
+      "y": 0.269,
+      "items": [
+        2516,
+        2519,
+        3033,
+        11284
+      ],
+      "kind": "bullet"
+    },
+    {
+      "npc": 4604,
+      "name": "Abigail Sawyer",
+      "faction": "H",
+      "mapId": 1458,
+      "x": 0.546,
+      "y": 0.381,
+      "items": [
+        2512,
+        2515,
+        3030,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 3625,
+      "name": "Rarck",
+      "faction": "H",
+      "mapId": 1459,
+      "x": 0.499,
+      "y": 0.821,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 5134,
+      "name": "Jonivera Farmountain",
+      "faction": "A",
+      "mapId": 1459,
+      "x": 0.431,
+      "y": 0.175,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 13216,
+      "name": "Gaelden Hammersmith",
+      "faction": "A",
+      "mapId": 1459,
+      "x": 0.443,
+      "y": 0.183,
+      "items": [
+        19316,
+        19317
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 13218,
+      "name": "Grunnda Wolfheart",
+      "faction": "H",
+      "mapId": 1459,
+      "x": 0.493,
+      "y": 0.825,
+      "items": [
+        19316,
+        19317
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 43411,
+      "name": "Lenedil Moonwing",
+      "faction": "N",
+      "mapId": 2482,
+      "x": 0.709,
+      "y": 0.508,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 244512,
+      "name": "Ortak Lomgok",
+      "faction": "H",
+      "mapId": 2482,
+      "x": 0.129,
+      "y": 0.529,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 258380,
+      "name": "Caitir Flinthew",
+      "faction": "A",
+      "mapId": 2482,
+      "x": 0.157,
+      "y": 0.504,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 251537,
+      "name": "Uualia Suncrest",
+      "faction": "N",
+      "mapId": 2521,
+      "x": 0.427,
+      "y": 0.244,
+      "items": [
+        2512,
+        2516
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 252390,
+      "name": "Antelariaa Cloudgaze",
+      "faction": "N",
+      "mapId": 2521,
+      "x": 0.63,
+      "y": 0.778,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 254358,
+      "name": "Veena Vericloud",
+      "faction": "N",
+      "mapId": 2521,
+      "x": 0.447,
+      "y": 0.454,
+      "items": [
+        2512,
+        2515,
+        2516,
+        2519
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 257421,
+      "name": "Tephri Thriceforged",
+      "faction": "N",
+      "mapId": 2521,
+      "x": 0.447,
+      "y": 0.442,
+      "items": [
+        2512,
+        2515
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 255895,
+      "name": "Grizzek",
+      "faction": "N",
+      "mapId": 2548,
+      "x": 0.766,
+      "y": 0.532,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 255897,
+      "name": "Friz Frazzlespark",
+      "faction": "N",
+      "mapId": 2548,
+      "x": 0.77,
+      "y": 0.528,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 259860,
+      "name": "Martha Wellsworth",
+      "faction": "A",
+      "mapId": 2548,
+      "x": 0.642,
+      "y": 0.841,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 260343,
+      "name": "Maka",
+      "faction": "H",
+      "mapId": 2548,
+      "x": 0.581,
+      "y": 0.459,
+      "items": [
+        2515,
+        2519,
+        3030,
+        3033,
+        11284,
+        11285
+      ],
+      "kind": "arrow"
+    },
+    {
+      "npc": 260566,
+      "name": "Fizzix Boomshot",
+      "faction": "N",
+      "mapId": 2548,
+      "x": 0.785,
+      "y": 0.536,
+      "items": [
+        2516,
+        2519,
+        3033,
+        11284
+      ],
+      "kind": "bullet"
+    }
+  ]
+}
