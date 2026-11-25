@@ -288,7 +288,13 @@ end
 function ns.NextAttempt(firstAttempt, stop)
 	local last = timing.failLast
 	if last and last >= firstAttempt - T.FAILURE_EARLY then
-		return last + T.RETRY
+		-- Retries go on every 0.5 s from the last refusal, even when the client did
+		-- not report the later ones: the first retry at or after the stop.
+		local nextTry = last + T.RETRY
+		if stop and stop > nextTry then
+			nextTry = nextTry + math.ceil((stop - nextTry) / T.RETRY) * T.RETRY
+		end
+		return nextTry
 	end
 	if stop and stop > firstAttempt then
 		return firstAttempt + math.ceil((stop - firstAttempt) / T.RETRY) * T.RETRY
