@@ -358,7 +358,7 @@ local function BuildWindow()
 	end
 	options.frame = frame
 
-	frame:SetSize(890, 540)
+	frame:SetSize(890, 580)
 	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
 	frame:SetFrameStrata("DIALOG")
 	frame:SetToplevel(true)
@@ -486,6 +486,9 @@ local function BuildWindow()
 	Slider(left, "windowExtra", "Stand-still window adjust", -200, 300, 10, " ms")
 	Heading(left, "Timing")
 	CheckRow(left, "addPing", "Add my ping to the window", "Your 'stopped moving' reaches the server one ping later, so the red window grows by your world latency. Used until the addon has measured your real stand-still time on a few shots.")
+	CheckRow(left, "retryModel", "0.5 s retry", "A shot refused because you were still moving is tried again 0.5 s later: the bar waits for that retry instead of predicting a shot you cannot make.",
+		"hasteWindup", "Haste wind-up", "Rapid Fire and Quick Shots shorten the 0.5 s wind-up, so the red window and the learned stand-still time shrink with it.")
+	CheckRow(left, "meleeResetsRanged", "Melee restarts the timer", "A main-hand or off-hand swing starts a new Auto Shot swing, so the bar counts from that swing instead of waiting on a late shot.")
 	Heading(left, "Ammo vendors on the map")
 	CheckRow(left, "vendorPins", "World map", "Every NPC that sells arrows or bullets, coloured by faction. Hover for what they sell, click for a waypoint.",
 		"vendorMinimap", "Minimap", "The same vendors on the minimap when they are near you. Hidden in combat. Click one for a waypoint.")
