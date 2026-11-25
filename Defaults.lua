@@ -53,6 +53,8 @@ local DEFAULTS = {
 	configVersion = 6,
 	calib = { stand = {}, early = {}, missed = {} },
 	shotLog = {},
+	recording = false,
+	recordLog = {},
 }
 ns.DEFAULTS = DEFAULTS
 
@@ -368,6 +370,10 @@ function ns.LoadSaved()
 		missed = CleanMeasures(calib.missed),
 	}
 	db.shotLog = CleanShotLog(db.shotLog)
+	if type(db.recordLog) ~= "table" then
+		db.recordLog = {}
+	end
+	db.recording = db.recording == true
 
 	ns.db = db
 	ns.ResetMedian()
@@ -385,6 +391,8 @@ function ns.ResetSaved()
 	db.point = keepPoint
 	db.calib = { stand = CleanMeasures(keepCalib.stand), early = CleanMeasures(keepCalib.early), missed = CleanMeasures(keepCalib.missed) }
 	db.shotLog = CleanShotLog(keepLog)
+	db.recording = old.recording == true
+	db.recordLog = type(old.recordLog) == "table" and old.recordLog or {}
 
 	HunterSwingForeverDB = db
 	ns.db = db

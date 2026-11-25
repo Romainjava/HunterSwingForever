@@ -48,6 +48,9 @@ vendors on the map.
 - Lock, unlock, drag or reset the bar position.
 - Commands: `/hsf`, `/hunterswing`, and `/hsf reset`, `lock`, `unlock`, `move`, `range`,
   `moving`, `timing`, `probe`.
+- `/hsf record on` / `off` / `clear` (off by default): records every shot, melee swing,
+  refused try, move, jump, spell, haste and range change, with the bar's prediction, into
+  the saved variables, to measure the timing over a long session.
 - Settings are stored in the `HunterSwingForeverDB` saved variable.
 
 ### Notes
@@ -110,6 +113,10 @@ Forever, avec les vendeurs de munitions sur la carte du monde.
 - Verrouiller, déverrouiller, déplacer ou réinitialiser la position de la barre.
 - Commandes : `/hsf`, `/hunterswing`, et `/hsf reset`, `lock`, `unlock`, `move`, `range`,
   `moving`, `timing`, `probe`.
+- `/hsf record on` / `off` / `clear` (désactivé par défaut) : enregistre chaque tir, coup au
+  corps à corps, essai refusé, mouvement, saut, sort, changement de hâte et de portée, avec
+  la prédiction de la barre, dans la variable sauvegardée, pour mesurer le timing sur une
+  longue session.
 - Les réglages sont stockés dans la variable sauvegardée `HunterSwingForeverDB`.
 
 #### Remarques

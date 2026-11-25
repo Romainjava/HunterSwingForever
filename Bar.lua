@@ -1493,6 +1493,10 @@ local SLASH_COMMANDS = {
 	lock = "lock",
 	unlock = "unlock",
 	move = "move",
+	record = "record",
+	["record on"] = "record on",
+	["record off"] = "record off",
+	["record clear"] = "record clear",
 }
 
 local function SlashHandler(input)
@@ -1519,6 +1523,8 @@ local function SlashHandler(input)
 		ns.ReportTiming()
 	elseif action == "probe" then
 		ns.ReportProbe()
+	elseif action:sub(1, 6) == "record" then
+		ns.Record(action:match("^record (%a+)$"))
 	elseif action == "lock" then
 		bar:SetLocked(true)
 		ns.Print("Locked.")

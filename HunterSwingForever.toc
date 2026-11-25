@@ -18,3 +18,4 @@ Pins.lua
 Pins.xml
 Bar.lua
 Options.lua
+Recorder.lua
