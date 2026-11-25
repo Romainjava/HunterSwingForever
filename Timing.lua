@@ -1149,7 +1149,7 @@ function ns.OnCastEnd(guid, spellID, interrupted, now)
 				local anchor = move.movingSince + (T.CANCEL_RETRY - T.RETRY)
 				if not timing.failLast or timing.failLast < move.movingSince then
 					timing.failLast = anchor
-					Record("CI", T.SPELL_ID, anchor)
+					Record("CR", T.SPELL_ID, anchor)
 				end
 			end
 		end
