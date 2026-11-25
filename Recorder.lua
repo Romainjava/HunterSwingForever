@@ -11,15 +11,15 @@ local function Field(value)
 	if value == nil then
 		return "-"
 	end
+	if ns.IsSecret(value) then
+		return "?"
+	end
 	if type(value) == "number" then
 		local plain = ns.PlainNumber(value)
 		return plain and string.format("%.3f", plain) or "?"
 	end
 	if type(value) == "boolean" then
 		return value and "1" or "0"
-	end
-	if ns.IsSecret(value) then
-		return "?"
 	end
 	return tostring(value)
 end
@@ -55,6 +55,18 @@ local function RangedSpeed()
 	return ok and ns.PlainNumber(speed) or nil
 end
 
+local function Probe(func, ...)
+	local ok, value = ns.SafeCall(func, ...)
+	if ok then
+		return value
+	end
+	return nil
+end
+
+local function MovementProbe()
+	return Probe(GetUnitSpeed, "player"), Probe(IsFalling), Probe(UnitCastingInfo, "player")
+end
+
 local function LogPrediction(reason)
 	if not Recording() then
 		return
@@ -74,6 +86,13 @@ local function LogPredictionNextFrame(reason)
 	C_Timer.After(0, function()
 		LogPrediction(reason)
 	end)
+end
+
+function ns.RecordMovement(kind, value, ...)
+	Log(kind, value, ...)
+	if kind == "AIR" and value == false then
+		LogPredictionNextFrame("land")
+	end
 end
 
 local function PollRange(_, elapsed)
@@ -116,10 +135,10 @@ local HANDLERS = {
 		end
 	end,
 	PLAYER_STARTED_MOVING = function()
-		Log("MV", 1)
+		Log("MV", 1, MovementProbe())
 	end,
 	PLAYER_STOPPED_MOVING = function()
-		Log("MV", 0)
+		Log("MV", 0, MovementProbe())
 		LogPredictionNextFrame("stop")
 	end,
 	UNIT_RANGEDDAMAGE = function(unit)
@@ -168,7 +187,7 @@ end)
 
 if type(hooksecurefunc) == "function" and type(JumpOrAscendStart) == "function" then
 	pcall(hooksecurefunc, "JumpOrAscendStart", function()
-		Log("JP")
+		Log("JP", MovementProbe())
 	end)
 end
 

@@ -20,6 +20,7 @@ local T = {
 	FEIGN_ID = 5384,
 	FEIGN_EXTRA = 0.15,
 	STOP_GRACE = 0.1,
+	MOVE_CONFIRM = 0.03,
 	STEADY_SHOTS = 20,
 	STEADY_TOLERANCE = 0.02,
 }
@@ -32,6 +33,9 @@ local move = {
 	moving = false,
 	stillSince = 0,
 	movingSince = nil,
+	ground = false,
+	airborne = false,
+	pendingSince = nil,
 	events = 0,
 	source = "nothing",
 }
@@ -161,8 +165,79 @@ function ns.WeaponBaseSpeed()
 	return speed
 end
 
+local function ReadSpeed()
+	local ok, speed = ns.SafeCall(GetUnitSpeed, "player")
+	return ok and ns.PlainNumber(speed) or nil
+end
+
+local function ReadFalling()
+	local ok, falling = ns.SafeCall(IsFalling)
+	if not ok then
+		return nil
+	end
+	return ns.PlainTrue(falling)
+end
+
+local function Record(kind, ...)
+	if ns.RecordMovement then
+		ns.RecordMovement(kind, ...)
+	end
+end
+
+local function SetMoving(isMoving, now)
+	if isMoving == move.moving then
+		return
+	end
+	move.moving = isMoving
+	if isMoving then
+		move.movingSince = now
+		if timing.lastShot then
+			timing.moved = true
+		end
+		ns.OnFeignMove(now)
+	else
+		move.stillSince = now
+	end
+end
+
+local function Resolve(now)
+	SetMoving(move.ground or move.airborne, now)
+end
+
+local function ConfirmPending(now)
+	if not move.pendingSince then
+		return
+	end
+	local speed = ReadSpeed()
+	local held = now - move.pendingSince
+	local how
+	if speed ~= nil then
+		how = speed > 0 and "speed" or nil
+	elseif held >= T.MOVE_CONFIRM then
+		how = "time"
+	end
+	if how then
+		local since = how == "time" and move.pendingSince or now
+		move.pendingSince = nil
+		move.ground = true
+		SetMoving(true, since)
+		Record("MC", how, held)
+	end
+end
+
+local function PollFalling(now)
+	local falling = ReadFalling()
+	if falling ~= nil and falling ~= move.airborne then
+		move.airborne = falling
+		Record("AIR", falling)
+	end
+end
+
 function ns.ResetMovement(now)
 	move.moving = false
+	move.ground = false
+	move.airborne = false
+	move.pendingSince = nil
 	move.stillSince = now
 	if move.events == 0 and not move.known then
 		move.source = "nothing"
@@ -173,51 +248,41 @@ function ns.OnMovementEvent(isMoving, now)
 	move.events = move.events + 1
 	move.known = true
 	move.source = "events"
-	local wasMoving = move.moving
-	move.moving = isMoving and true or false
-	if not move.moving then
-		move.stillSince = now
-	elseif not wasMoving then
-		move.movingSince = now
+	if isMoving then
+		if not move.ground and not move.pendingSince then
+			move.pendingSince = now
+		end
+		ConfirmPending(now)
+	else
+		if move.pendingSince then
+			Record("MD", now - move.pendingSince)
+			move.pendingSince = nil
+		end
+		move.ground = false
 	end
-	if move.moving and timing.lastShot then
-		timing.moved = true
-	end
-	if move.moving then
-		ns.OnFeignMove(now)
-	end
+	Resolve(now)
 end
 
 function ns.PollMovement(now)
+	PollFalling(now)
 	if move.events > 0 then
 		move.known = true
 		move.source = "events"
+		ConfirmPending(now)
+		Resolve(now)
 		return
 	end
 
-	local speedOK, speed = ns.SafeCall(GetUnitSpeed, "player")
-	local fallOK, falling = ns.SafeCall(IsFalling)
-
-	local plainSpeed = speedOK and ns.PlainNumber(speed) or nil
-	local plainFalling = fallOK and ns.PlainTrue(falling) or nil
-
-	if plainSpeed == nil and plainFalling == nil then
+	local speed = ReadSpeed()
+	if speed == nil and ReadFalling() == nil then
 		move.source = "nothing"
 		return
 	end
 
-	local isMoving = (plainSpeed ~= nil and plainSpeed > 0) or plainFalling == true
 	move.known = true
 	move.source = "speed"
-	if isMoving ~= move.moving then
-		move.moving = isMoving
-		if not isMoving then
-			move.stillSince = now
-		else
-			move.movingSince = now
-			ns.OnFeignMove(now)
-		end
-	end
+	move.ground = speed ~= nil and speed > 0
+	Resolve(now)
 end
 
 function ns.MovementKnown()
@@ -470,6 +535,9 @@ local function HealUnreportedStop(now)
 	local noMovementEventSinceLastShot = move.events == timing.eventsAtShot
 	if shotFiredWhileMarkedMoving and noMovementEventSinceLastShot then
 		move.moving = false
+		move.ground = false
+		move.airborne = false
+		move.pendingSince = nil
 		move.stillSince = now
 		timing.moved = true
 	end
