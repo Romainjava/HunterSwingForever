@@ -37,6 +37,7 @@ local DEFAULTS = {
 	retryModel = true,
 	meleeResetsRanged = true,
 	hasteWindup = true,
+	feignResetsRanged = true,
 	vendorPins = true,
 	vendorMinimap = true,
 	vendorContinent = true,
@@ -51,7 +52,7 @@ local DEFAULTS = {
 		text = { 0.95, 0.95, 0.95, 1 },
 		melee = { 1.00, 0.78, 0.30, 1 },
 	},
-	configVersion = 5,
+	configVersion = 6,
 	calib = { stand = {}, early = {}, missed = {} },
 	shotLog = {},
 }
@@ -370,9 +371,16 @@ function ns.LoadSaved()
 			db.calib.stand = {}
 		end
 	end
+	if version < 6 then
+		-- 1.0.0 also learned from shots under Rapid Fire or Quick Shots, which pulled
+		-- the stand-still time down: learn again from unhasted shots only.
+		if type(db.calib) == "table" then
+			db.calib.stand = {}
+		end
+	end
 
 	Merge(db, DEFAULTS)
-	db.configVersion = 5
+	db.configVersion = 6
 
 	local calib = db.calib
 	db.calib = {
@@ -395,7 +403,7 @@ function ns.ResetSaved()
 
 	local db = {}
 	Merge(db, DEFAULTS)
-	db.configVersion = 5
+	db.configVersion = 6
 	db.point = keepPoint
 	db.calib = { stand = CleanMeasures(keepCalib.stand), early = CleanMeasures(keepCalib.early), missed = CleanMeasures(keepCalib.missed) }
 	db.shotLog = CleanShotLog(keepLog)

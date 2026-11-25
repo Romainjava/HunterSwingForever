@@ -19,6 +19,11 @@ local T = {
 	DEMO_CYCLE = 3.0,
 	RETRY = 0.5,
 	FAILURE_EARLY = 0.25,
+	FEIGN_ID = 5384,
+	FEIGN_EXTRA = 0.15, -- after Feign Death the swing restarts at the weapon's base speed + this
+	STOP_GRACE = 0.1, -- a move this close to the shot no longer stops it
+	STEADY_SHOTS = 20, -- swings whose haste ratio sets the unhasted reference
+	STEADY_TOLERANCE = 0.02,
 }
 ns.T = T
 
@@ -28,6 +33,7 @@ local move = {
 	known = false,
 	moving = false,
 	stillSince = 0,
+	movingSince = nil,
 	events = 0,
 	source = "nothing",
 }
@@ -51,6 +57,10 @@ local timing = {
 	failLast = nil,
 	ratio = 1, -- swing speed / weapon base speed, locked for the current swing
 	cycleStart = nil, -- the current swing can be restarted by a melee swing
+	cycleOverride = nil, -- a Feign Death reset runs one swing at the weapon's base speed
+	feignArmed = false, -- Feign Death cast: the next move or jump restarts the swing
+	ratios = {}, -- haste ratios of the last swings, to tell unhasted shots apart
+	ratioItem = nil,
 }
 ns.timing = timing
 
@@ -74,6 +84,10 @@ end
 
 local function HasteWindup()
 	return not (ns.db and ns.db.hasteWindup == false)
+end
+
+local function FeignResets()
+	return not (ns.db and ns.db.feignResetsRanged == false)
 end
 
 ----------------------------------------------------------------------------
@@ -174,12 +188,18 @@ function ns.OnMovementEvent(isMoving, now)
 	move.events = move.events + 1
 	move.known = true
 	move.source = "events"
+	local wasMoving = move.moving
 	move.moving = isMoving and true or false
 	if not move.moving then
 		move.stillSince = now
+	elseif not wasMoving then
+		move.movingSince = now
 	end
 	if move.moving and timing.lastShot then
 		timing.moved = true
+	end
+	if move.moving then
+		ns.OnFeignMove(now)
 	end
 end
 
@@ -208,6 +228,9 @@ function ns.PollMovement(now)
 		move.moving = isMoving
 		if not isMoving then
 			move.stillSince = now
+		else
+			move.movingSince = now
+			ns.OnFeignMove(now)
 		end
 	end
 end
@@ -333,7 +356,7 @@ function ns.Phase(now, demo)
 		cycle = T.DEMO_CYCLE
 		need = ns.Window()
 	else
-		cycle = timing.speed
+		cycle = timing.cycleOverride or timing.speed
 		need = ns.Need()
 	end
 	if not cycle or cycle <= 0 then
@@ -377,8 +400,24 @@ function ns.StandStill(now, cycle, need, demo)
 	if demo then
 		return nil
 	end
-	if not move.known or move.moving or not move.stillSince then
+	if not move.known or not move.stillSince then
 		return nil
+	end
+	-- A move that starts in the last tenth of a second before the shot does not stop
+	-- it (the server already has it): keep the prediction made while standing.
+	local grace = false
+	if move.moving then
+		if not move.movingSince or move.movingSince < move.stillSince then
+			return nil
+		end
+		local saved = move.moving
+		move.moving = false
+		local shot = ns.StandStill(move.movingSince, cycle, need, demo)
+		move.moving = saved
+		if not shot or move.movingSince < shot - T.STOP_GRACE or now > shot then
+			return nil
+		end
+		grace = true
 	end
 	local origin = CycleOrigin(now)
 	local start, shotTime
@@ -409,7 +448,7 @@ function ns.StandStill(now, cycle, need, demo)
 	else
 		progress = math.max(0, math.min(1, (now - start) / (shotTime - start)))
 	end
-	return shotTime, start, left, progress, pushed
+	return shotTime, start, left, progress, pushed, grace
 end
 
 ---------------------------------------------------------------------------
@@ -431,6 +470,36 @@ local function AppendShotLog(row)
 	log[#log + 1] = row
 	while #log > T.LOG_MAX do
 		table.remove(log, 1)
+	end
+end
+
+-- True when a swing ran without a temporary haste buff (Rapid Fire, Quick Shots...):
+-- its ratio is the highest of the recent swings, i.e. the quiver and gear only.
+local function Unhasted(ratio)
+	if type(ratio) ~= "number" then
+		return true
+	end
+	local steady = ratio
+	for _, value in ipairs(timing.ratios) do
+		if value > steady then
+			steady = value
+		end
+	end
+	return ratio >= steady * (1 - T.STEADY_TOLERANCE)
+end
+
+local function RememberRatio(ratio)
+	local ok, value = ns.SafeCall(_G.GetInventoryItemID, "player", 18)
+	local item = ok and ns.PlainNumber(value) or nil
+	if item ~= timing.ratioItem then
+		timing.ratios = {}
+		timing.ratioItem = item
+	end
+	if type(ratio) == "number" then
+		timing.ratios[#timing.ratios + 1] = ratio
+		while #timing.ratios > T.STEADY_SHOTS do
+			table.remove(timing.ratios, 1)
+		end
 	end
 end
 
@@ -457,11 +526,12 @@ function ns.OnRangedSwing(duration)
 	local previousSpeed = timing.speed
 	local previousWindup = ns.Windup()
 	local previousRatio = HasteWindup() and (timing.ratio or 1) or 1
+	local previousUnhasted = Unhasted(timing.lastRatio)
 	local gap = previous and (now - previous) or nil
 
 	-- Learn from the swing that just ended (SPEC 7.5).
 	if previous and previousSpeed and not timing.broken and not timing.heldUp
-		and #timing.haste == 0 and not ns.demoActive
+		and #timing.haste == 0 and not ns.demoActive and previousUnhasted
 		and move.known and not move.moving and move.stillSince and gap then
 		local need = ns.Need()
 		local stopBefore = (previous + previousSpeed) - move.stillSince
@@ -511,6 +581,8 @@ function ns.OnRangedSwing(duration)
 	end
 	-- Locked for the swing that starts now: the wind-up follows this ratio.
 	timing.ratio = hasteRatio or 1
+	timing.lastRatio = hasteRatio
+	RememberRatio(hasteRatio)
 
 	AppendShotLog({
 		t = Round3(now),
@@ -534,6 +606,8 @@ function ns.OnRangedSwing(duration)
 		timing.speed = speed
 	end
 	timing.cycleStart = now
+	timing.cycleOverride = nil
+	timing.feignArmed = false
 	timing.running = true
 	timing.broken = false
 	timing.heldUp = false
@@ -555,7 +629,30 @@ function ns.OnMeleeSwing(duration)
 	-- A melee swing restarts the Auto Shot swing from the melee swing time.
 	if MeleeResets() and timing.speed then
 		timing.cycleStart = now
+		timing.cycleOverride = nil
 	end
+end
+
+-- Feign Death: the next move or jump restarts the Auto Shot swing, unhasted, at the
+-- weapon's base speed + 0.15 s (the rule WeaponSwingTimer uses on Forever).
+function ns.OnSpellSucceeded(spellID)
+	if ns.PlainNumber(spellID) == T.FEIGN_ID and FeignResets() then
+		timing.feignArmed = true
+	end
+end
+
+function ns.OnFeignMove(now)
+	if not timing.feignArmed then
+		return
+	end
+	timing.feignArmed = false
+	if not FeignResets() or not timing.speed then
+		return
+	end
+	timing.cycleStart = now
+	local base = ns.WeaponBaseSpeed()
+	timing.cycleOverride = base and (base + T.FEIGN_EXTRA) or nil
+	timing.broken = true
 end
 
 function ns.SetAutoRepeat(running)

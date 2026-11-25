@@ -22,9 +22,12 @@ vendors on the map.
 - A late shot is predicted the way the game retries it: Auto Shot is tried again 0.5 s
   after a refusal, so the bar waits for that retry instead of promising a shot you cannot
   make. A melee swing restarts the Auto Shot swing, and the stand-still time follows ranged
-  haste (Rapid Fire, Quick Shots). Each of the three can be turned off in the options.
-- The learned stand-still time relearns once after this update: the old measurements were
-  taken with the old rule.
+  haste (Rapid Fire, Quick Shots). After Feign Death, your first move or jump restarts the
+  Auto Shot swing at the weapon's base speed + 0.15 s. Each of the four can be turned off in
+  the options.
+- The stand-still time is learned from shots without a temporary haste buff, so Rapid Fire
+  and Quick Shots do not pull it down; under the buff the window shrinks by the haste.
+- No STOP in the last 0.1 s before the shot: a move that late no longer stops it.
 
 ### Extras
 
@@ -77,9 +80,13 @@ Forever, avec les vendeurs de munitions sur la carte du monde.
 - Un tir en retard est prédit comme le jeu le retente : Auto Shot est retenté 0,5 s après un
   refus, donc la barre attend ce nouvel essai au lieu de promettre un tir impossible. Un
   coup au corps à corps relance le tir automatique, et le temps d'immobilité suit la hâte à
-  distance (Rapid Fire, Quick Shots). Chacun des trois se désactive dans les options.
-- Le temps d'immobilité appris se réapprend une fois après cette mise à jour : les anciennes
-  mesures suivaient l'ancienne règle.
+  distance (Rapid Fire, Quick Shots). Après Feindre la mort, le premier déplacement ou saut
+  relance le tir automatique à la vitesse de base de l'arme + 0,15 s. Chacun des quatre se
+  désactive dans les options.
+- Le temps d'immobilité est appris sur les tirs sans buff de hâte temporaire, pour que Rapid
+  Fire et Quick Shots ne le faussent pas ; sous le buff, la fenêtre rétrécit avec la hâte.
+- Plus de STOP dans les 0,1 dernière seconde avant le tir : un mouvement aussi tardif ne
+  l'empêche plus.
 
 #### En plus
 

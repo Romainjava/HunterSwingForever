@@ -671,9 +671,10 @@ local function AutoState(now, demo)
 		return state
 	end
 
-	local shotTime, standStart, standLeft, progress, retryWait = ns.StandStill(now, phase.cycle, phase.need)
+	local shotTime, standStart, standLeft, progress, retryWait, grace = ns.StandStill(now, phase.cycle, phase.need)
 	state.shotTime, state.standStart, state.standLeft, state.standProgress = shotTime, standStart, standLeft, progress
-	state.moving = ns.move.moving
+	-- A move in the last 0.1 s before the shot no longer stops it: no STOP then.
+	state.moving = ns.move.moving and not grace
 	state.known = ns.move.known
 	state.held = ns.range.held
 
@@ -1422,6 +1423,7 @@ local EVENT_LIST = {
 	"PLAYER_REGEN_ENABLED",
 	"PLAYER_STARTED_MOVING",
 	"PLAYER_STOPPED_MOVING",
+	"UNIT_SPELLCAST_SUCCEEDED",
 	"UNIT_RANGEDDAMAGE",
 	"UNIT_ATTACK_SPEED",
 	"BAG_UPDATE_DELAYED",
@@ -1431,6 +1433,15 @@ local EVENT_LIST = {
 
 for _, event in ipairs(EVENT_LIST) do
 	Register(events, event)
+end
+
+-- A jump out of Feign Death restarts the swing too (a post-hook: no taint).
+if type(hooksecurefunc) == "function" and type(JumpOrAscendStart) == "function" then
+	pcall(hooksecurefunc, "JumpOrAscendStart", function()
+		if ns.db and ns.OnFeignMove then
+			ns.OnFeignMove(GetTime())
+		end
+	end)
 end
 
 function ns.OnEvent(event, ...)
@@ -1491,6 +1502,11 @@ function ns.OnEvent(event, ...)
 		ns.OnMovementEvent(true, now)
 	elseif event == "PLAYER_STOPPED_MOVING" then
 		ns.OnMovementEvent(false, now)
+	elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
+		local unit, _, spellID = ...
+		if unit == "player" then
+			ns.OnSpellSucceeded(spellID)
+		end
 	elseif event == "UNIT_RANGEDDAMAGE" then
 		local unit = ...
 		if unit == "player" then
