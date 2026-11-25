@@ -45,6 +45,8 @@ local timing = {
 	haste = {},
 	eventsAtShot = 0,
 	gaps = {},
+	failCount = 0,
+	failLast = nil,
 }
 ns.timing = timing
 
@@ -55,6 +57,72 @@ local function Round3(value)
 		return nil
 	end
 	return math.floor(value * 1000 + 0.5) / 1000
+end
+
+----------------------------------------------------------------------------
+-- Diagnostics: an Auto Shot the game refused, and the weapon's own speed
+----------------------------------------------------------------------------
+
+-- Counted per swing for the shot log only; nothing here feeds the prediction.
+local failed = CreateFrame("Frame")
+local function OnFailedQuiet(_, _, unit, _, spellID)
+	if unit ~= "player" then
+		return
+	end
+	local id = ns.PlainNumber(spellID)
+	if id ~= T.SPELL_ID then
+		return
+	end
+	timing.failCount = timing.failCount + 1
+	timing.failLast = GetTime()
+end
+failed:SetScript("OnEvent", OnFailedQuiet)
+pcall(failed.RegisterEvent, failed, "UNIT_SPELLCAST_FAILED_QUIET")
+
+local function SpeedFromLines(lines)
+	if type(lines) ~= "table" then
+		return nil
+	end
+	for _, line in ipairs(lines) do
+		if type(line) == "table" then
+			for _, key in ipairs({ "leftText", "rightText" }) do
+				local text = line[key]
+				if type(text) == "string" then
+					local speed = string.match(text, "Speed%s+(%d+[%.,]%d+)")
+					if speed then
+						return ns.PlainNumber(tonumber((string.gsub(speed, ",", "."))))
+					end
+				end
+			end
+		end
+	end
+	return nil
+end
+
+-- The ranged weapon's own speed (the "Speed 2.80" line of its tooltip), or nil.
+local baseSpeed = { item = nil, speed = nil }
+
+function ns.WeaponBaseSpeed()
+	local ok, value = ns.SafeCall(_G.GetInventoryItemID, "player", 18)
+	local itemID = ok and ns.PlainNumber(value) or nil
+	if not itemID then
+		return nil
+	end
+	if baseSpeed.item == itemID then
+		return baseSpeed.speed
+	end
+	local speed
+	local getter = C_TooltipInfo and C_TooltipInfo.GetInventoryItem
+	if type(getter) == "function" then
+		local loaded, data = pcall(getter, "player", 18)
+		if loaded and type(data) == "table" then
+			speed = SpeedFromLines(data.lines)
+		end
+	end
+	if speed and speed > 0 then
+		baseSpeed.item, baseSpeed.speed = itemID, speed
+	end
+	return speed
 end
 
 ---------------------------------------------------------------------------
@@ -351,6 +419,12 @@ function ns.OnRangedSwing(duration)
 		still = Round3(now - (move.stillSince or now))
 	end
 
+	local base = ns.WeaponBaseSpeed()
+	local hasteRatio
+	if base and base > 0 and speed and speed > 0 then
+		hasteRatio = Round3(speed / base)
+	end
+
 	AppendShotLog({
 		t = Round3(now),
 		speed = Round3(speed or 0),
@@ -363,6 +437,9 @@ function ns.OnRangedSwing(duration)
 		moved = timing.moved and 1 or 0,
 		haste = table.concat(timing.haste, ","),
 		still = still,
+		failed = timing.failCount,
+		failedAgo = (timing.failCount > 0 and timing.failLast) and Round3(now - timing.failLast) or nil,
+		hasteRatio = hasteRatio,
 	})
 
 	timing.lastShot = now
@@ -375,6 +452,8 @@ function ns.OnRangedSwing(duration)
 	timing.moved = false
 	timing.haste = {}
 	timing.eventsAtShot = move.events
+	timing.failCount = 0
+	timing.failLast = nil
 end
 
 function ns.OnMeleeSwing(duration)
@@ -467,6 +546,36 @@ function ns.ReportTiming()
 			usable[#usable + 1] = over
 		end
 	end
+
+	-- Diagnostics added with 1.0.0: refused tries and the haste ratio seen (never used above).
+	local log = ns.db.shotLog or {}
+	local failedShots, agoSum, agoCount = 0, 0, 0
+	local low, high
+	for _, row in ipairs(log) do
+		if (ns.PlainNumber(row.failed) or 0) > 0 then
+			failedShots = failedShots + 1
+			local ago = ns.PlainNumber(row.failedAgo)
+			if ago then
+				agoSum = agoSum + ago
+				agoCount = agoCount + 1
+			end
+		end
+		local ratio = ns.PlainNumber(row.hasteRatio)
+		if ratio then
+			low = math.min(low or ratio, ratio)
+			high = math.max(high or ratio, ratio)
+		end
+	end
+	local tries
+	if failedShots == 0 then
+		tries = "none"
+	elseif agoCount == 0 then
+		tries = string.format("%d of %d shots", failedShots, #log)
+	else
+		tries = string.format("%d of %d shots, %.2f s between the last failed try and the shot", failedShots, #log, agoSum / agoCount)
+	end
+	local speedText = low and string.format("%.2fx to %.2fx", low, high) or "not readable"
+	ns.PrintLine(string.format("Failed Auto Shot tries: %s; swing speed against the weapon's %s.", tries, speedText))
 
 	local samples = ns.db.calib.stand
 	local count = #samples

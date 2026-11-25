@@ -22,11 +22,15 @@ vendors on the map.
 
 ### Extras
 
-- Range check with a distance estimate (`20-25 yd` or `~23 yd`).
+- Range check with a distance estimate (`20-25 yd` or `~23 yd`). The range no longer shows
+  OUT OF RANGE when the game hides the range in combat: an unreadable range now stays
+  unknown instead of guessing.
 - Shots-to-kill estimate from the target's health and your average shot.
 - Ammo left as a percentage or a count, coloured by how much is left.
 - 139 ammo vendors pinned on the world map and the minimap, coloured by faction, with a
   tooltip showing what they sell and a click to set a waypoint.
+- `/hsf timing` now also reports the Auto Shot tries the game refused (how many, and how
+  long before the shot) and the haste seen (your swing speed against the weapon's).
 
 ### Options and commands
 
@@ -67,12 +71,17 @@ Forever, avec les vendeurs de munitions sur la carte du monde.
 
 #### En plus
 
-- Vérification de portée avec une estimation de distance (`20-25 yd` ou `~23 yd`).
+- Vérification de portée avec une estimation de distance (`20-25 yd` ou `~23 yd`). La
+  portée n'affiche plus OUT OF RANGE quand le jeu cache la portée en combat : une portée
+  illisible reste inconnue au lieu d'être devinée.
 - Estimation du nombre de tirs pour tuer, à partir de la vie de la cible et de votre tir
   moyen.
 - Munitions restantes en pourcentage ou en nombre, colorées selon ce qu'il reste.
 - 139 vendeurs de munitions sur la carte du monde et sur la minicarte, colorés par faction,
   avec une infobulle sur ce qu'ils vendent et un clic pour poser un point de passage.
+- `/hsf timing` indique aussi les tirs automatiques que le jeu a refusés (combien, et
+  combien de temps avant le tir) et la hâte vue (votre vitesse de tir face à celle de
+  l'arme).
 
 #### Options et commandes
 

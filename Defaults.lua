@@ -299,6 +299,16 @@ local function CleanShotLog(list)
 	if type(list) == "table" then
 		for _, row in ipairs(list) do
 			if type(row) == "table" and IsFiniteNumber(row.t) then
+				-- 1.0.0 diagnostics: keep them when sane, drop a corrupted value.
+				if not (IsFiniteNumber(row.failed) and row.failed >= 0) then
+					row.failed = 0
+				end
+				if not (IsFiniteNumber(row.failedAgo) and row.failedAgo >= 0) then
+					row.failedAgo = nil
+				end
+				if not (IsFiniteNumber(row.hasteRatio) and row.hasteRatio > 0 and row.hasteRatio < 4) then
+					row.hasteRatio = nil
+				end
 				out[#out + 1] = row
 			end
 		end
