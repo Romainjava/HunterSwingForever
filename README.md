@@ -36,7 +36,6 @@ Optional extras:
 | `/hsf moving` | print the movement source that is used |
 | `/hsf timing` | print the last shot gaps and the measured stand-still time |
 | `/hsf probe` | print what the shots-to-kill estimate sees |
-| `/hsf record on` / `off` / `clear` | record every shot, melee swing, refused try, move, spell and the bar's prediction into the saved variables (off by default), to measure the timing over a long session |
 
 The settings and measurements are stored in the `HunterSwingForeverDB` saved variable.
 The bar is hunter-only; the options window and the commands work on any class.
