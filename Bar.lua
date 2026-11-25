@@ -1466,10 +1466,14 @@ function ns.OnEvent(event, ...)
 	elseif event == "PLAYER_SWING" then
 		local duration, swingType = ...
 		swingType = ns.PlainNumber(swingType)
-		if swingType == 2 then
+		local types = Enum and Enum.PlayerSwingType
+		local ranged = (types and types.Ranged) or 2
+		local mainHand = (types and types.MainHand) or 0
+		local offHand = (types and types.OffHand) or 1
+		if swingType == ranged then
 			ns.OnRangedSwing(duration)
 			ns.RequestFlash(0.35)
-		elseif swingType == 0 then
+		elseif swingType == mainHand or swingType == offHand then
 			ns.OnMeleeSwing(duration)
 			if ns.db.showMelee then
 				ns.RequestFlash(0.25)
