@@ -16,17 +16,54 @@ local T = {
 	GAPS_MAX = 10,
 	DEMO_CYCLE = 3.0,
 	RETRY = 0.5,
+	CANCEL_RETRY = 0.7,
+	INTERRUPT_MIN_LAG = 0.04,
 	FAILURE_EARLY = 0.25,
 	FEIGN_ID = 5384,
 	FEIGN_EXTRA = 0.15,
 	STOP_GRACE = 0.1,
+	STOP_LEAD = 0.06,
 	MOVE_CONFIRM = 0.03,
+	JUMP_GRACE = 0.1,
+	AIM_MAX = 4.5,
+	CHANNEL_MAX = 15,
+	AUTO_FLICKER = 0.5,
+	PRESS_KEEP = 5,
+	PRESS_NEAR = 0.05,
+	PRESS_CLEAR = 0.15,
+	BLOCK_NEAR = 0.2,
+	RF_ID = 3045,
+	RF_HASTE = 1.4,
+	RF_DURATION = 15,
+	QS_HASTE = 1.3,
+	QS_DURATION = 12,
+	QS_CONFIRM = 1.15,
+	QS_END_SLOP = 0.15,
 	STEADY_SHOTS = 20,
 	STEADY_TOLERANCE = 0.02,
 }
 ns.T = T
 
 ns.latency = 0
+
+local AIMED_IDS = {
+	[19434] = true,
+	[20900] = true,
+	[20901] = true,
+	[20902] = true,
+	[20903] = true,
+	[20904] = true,
+	[27065] = true,
+}
+
+local ERROR_KINDS = {
+	ERR_BADATTACKFACING = "facing",
+	SPELL_FAILED_UNIT_NOT_INFRONT = "facing",
+	SPELL_FAILED_LINE_OF_SIGHT = "los",
+	SPELL_FAILED_OUT_OF_RANGE = "range",
+	ERR_OUT_OF_RANGE = "range",
+	SPELL_FAILED_TOO_CLOSE = "range",
+}
 
 local move = {
 	known = false,
@@ -35,7 +72,11 @@ local move = {
 	movingSince = nil,
 	ground = false,
 	airborne = false,
+	cc = false,
+	jumpAt = nil,
 	pendingSince = nil,
+	aimKey = nil,
+	aimAt = 0,
 	events = 0,
 	source = "nothing",
 }
@@ -44,8 +85,13 @@ ns.move = move
 local timing = {
 	lastShot = nil,
 	speed = nil,
+	prevSpeed = nil,
 	running = false,
 	autoRepeat = false,
+	lastAutoStopAt = -1,
+	autoOffAt = -1,
+	autoStartAt = nil,
+	onBeforeStop = false,
 	lastMelee = nil,
 	meleeSpeed = nil,
 	meleeAuto = false,
@@ -57,7 +103,22 @@ local timing = {
 	gaps = {},
 	failCount = 0,
 	failLast = nil,
+	lastFailGuid = nil,
+	lastInterruptGuid = nil,
+	failUndo = nil,
+	pressIDs = {},
+	blockErrAt = -1,
+	blockErrKind = nil,
+	channelAt = nil,
 	ratio = 1,
+	rfEnd = 0,
+	rfHasted = false,
+	qsEnd = 0,
+	qsHasted = false,
+	qsProcAt = -1,
+	qsBaseSpeed = nil,
+	auraAt = -1,
+	windupShift = 0,
 	cycleStart = nil,
 	cycleOverride = nil,
 	feignArmed = false,
@@ -67,12 +128,109 @@ local timing = {
 ns.timing = timing
 
 local nextPing = 0
+local spellNames = {}
+local errorLookup = nil
 
 local function Round3(value)
 	if type(value) ~= "number" then
 		return nil
 	end
 	return math.floor(value * 1000 + 0.5) / 1000
+end
+
+local function PlainString(value)
+	if type(value) ~= "string" or ns.IsSecret(value) then
+		return nil
+	end
+	return value
+end
+
+local function SpellName(spellID)
+	local id = ns.PlainNumber(spellID)
+	if not id then
+		return nil
+	end
+	local cached = spellNames[id]
+	if cached then
+		return cached
+	end
+	if C_Spell and type(C_Spell.GetSpellInfo) == "function" then
+		local ok, info = pcall(C_Spell.GetSpellInfo, id)
+		if ok and type(info) == "table" and not ns.IsSecret(info) then
+			local name = PlainString(info.name)
+			if name then
+				spellNames[id] = name
+				return name
+			end
+		end
+	elseif type(_G.GetSpellInfo) == "function" then
+		local ok, name = pcall(_G.GetSpellInfo, id)
+		if ok then
+			name = PlainString(name)
+			if name then
+				spellNames[id] = name
+				return name
+			end
+		end
+	end
+	return nil
+end
+
+local function IsAimedSpell(spellID)
+	local id = ns.PlainNumber(spellID)
+	if not id then
+		return false
+	end
+	if AIMED_IDS[id] then
+		return true
+	end
+	local aimedName = SpellName(19434)
+	return aimedName ~= nil and SpellName(id) == aimedName
+end
+
+local function IsRapidFireSpell(spellID)
+	local id = ns.PlainNumber(spellID)
+	if not id then
+		return false
+	end
+	if id == T.RF_ID then
+		return true
+	end
+	local rfName = SpellName(T.RF_ID)
+	return rfName ~= nil and SpellName(id) == rfName
+end
+
+local function IsFeignSpell(spellID)
+	local id = ns.PlainNumber(spellID)
+	if not id then
+		return false
+	end
+	if id == T.FEIGN_ID then
+		return true
+	end
+	local feignName = SpellName(T.FEIGN_ID)
+	return feignName ~= nil and SpellName(id) == feignName
+end
+
+function ns.ClassifyError(first, second)
+	if not errorLookup then
+		errorLookup = {}
+		for globalKey, kind in pairs(ERROR_KINDS) do
+			local text = PlainString(rawget(_G, globalKey))
+			if text and text ~= "" then
+				errorLookup[text] = kind
+			end
+		end
+	end
+	local a = PlainString(first)
+	if a and errorLookup[a] then
+		return errorLookup[a]
+	end
+	local b = PlainString(second)
+	if b and errorLookup[b] then
+		return errorLookup[b]
+	end
+	return nil
 end
 
 local function RetryModel()
@@ -91,8 +249,146 @@ local function FeignResets()
 	return not (ns.db and ns.db.feignResetsRanged == false)
 end
 
-local failed = CreateFrame("Frame")
-local function OnFailedQuiet(_, _, unit, _, spellID)
+local function AddPingEnabled()
+	return not (ns.db and ns.db.addPing == false)
+end
+
+local function StopLead()
+	if not AddPingEnabled() then
+		return 0
+	end
+	return ns.latency + T.STOP_LEAD
+end
+
+local function Channeling(now)
+	if timing.channelAt and now - timing.channelAt > T.CHANNEL_MAX then
+		timing.channelAt = nil
+	end
+	return timing.channelAt ~= nil
+end
+
+local function NoLivingTarget()
+	local okExists, exists = ns.SafeCall(UnitExists, "target")
+	if okExists and ns.PlainTrue(exists) == false then
+		return true
+	end
+	local okDead, dead = ns.SafeCall(UnitIsDeadOrGhost, "target")
+	if okDead and ns.PlainTrue(dead) == true then
+		return true
+	end
+	return false
+end
+
+local function Record(kind, ...)
+	if ns.RecordMovement then
+		ns.RecordMovement(kind, ...)
+	end
+end
+
+local function HasteDelta(now)
+	local factor = 1
+	local rfActive = timing.rfEnd > 0 and now < timing.rfEnd
+	if rfActive and not timing.rfHasted then
+		factor = factor * T.RF_HASTE
+	elseif not rfActive and timing.rfHasted then
+		factor = factor / T.RF_HASTE
+	end
+	local qsActive = timing.qsEnd > 0 and now < timing.qsEnd
+	if qsActive and not timing.qsHasted then
+		factor = factor * T.QS_HASTE
+	elseif not qsActive and timing.qsHasted then
+		factor = factor / T.QS_HASTE
+	end
+	return factor
+end
+
+local function EffectiveRatio(now)
+	local ratio = timing.ratio
+	if type(ratio) ~= "number" or ratio <= 0 then
+		return 1
+	end
+	return ratio / HasteDelta(now)
+end
+
+local function CycleOrigin(now)
+	return timing.cycleStart or timing.lastShot or now
+end
+
+local function EffectiveCycle(now)
+	local base = timing.cycleOverride or timing.speed
+	if not base or base <= 0 then
+		return nil
+	end
+	if timing.cycleOverride then
+		return base
+	end
+	local delta = HasteDelta(now)
+	if delta == 1 then
+		return base + (timing.windupShift or 0)
+	end
+	local origin = CycleOrigin(now)
+	if now >= origin + base + (timing.windupShift or 0) then
+		return base / delta
+	end
+	return base + (timing.windupShift or 0)
+end
+
+local function UpdateWindupShift(now)
+	if not timing.speed or timing.speed <= 0 or timing.cycleOverride then
+		return
+	end
+	local origin = CycleOrigin(now)
+	local currentEnd = origin + timing.speed + (timing.windupShift or 0)
+	local currentWindup = ns.Windup(now)
+	if now < currentEnd - currentWindup then
+		local shotWindup = HasteWindup() and (T.NEED * (timing.ratio or 1)) or T.NEED
+		timing.windupShift = currentWindup - shotWindup
+	end
+end
+
+local function ExpireHasteBuffs(now)
+	local changed = false
+	if timing.rfEnd > 0 and now >= timing.rfEnd then
+		timing.rfEnd = 0
+		changed = true
+		Record("HT", "rf_end", EffectiveRatio(now))
+	end
+	if timing.qsEnd > 0 and now >= timing.qsEnd then
+		timing.qsEnd = 0
+		timing.qsBaseSpeed = nil
+		changed = true
+		Record("HT", "qs_end", EffectiveRatio(now))
+	end
+	if changed then
+		UpdateWindupShift(now)
+	end
+end
+
+local function OnQuickShotsProc(now, previousSpeed, currentSpeed)
+	local active = timing.qsEnd > 0 and now < timing.qsEnd
+	if active and now >= timing.qsEnd - T.QS_END_SLOP then
+		return
+	end
+	timing.qsEnd = now + T.QS_DURATION
+	if active then
+		return
+	end
+	if not currentSpeed or currentSpeed <= 0 then
+		return
+	end
+	timing.qsProcAt = now
+	timing.qsBaseSpeed = currentSpeed
+	if previousSpeed and currentSpeed < previousSpeed / T.QS_CONFIRM then
+		timing.qsBaseSpeed = previousSpeed
+		timing.qsHasted = true
+		Record("HT", "qs_in_reload", EffectiveRatio(now))
+		return
+	end
+	UpdateWindupShift(now)
+	Record("HT", "qs_proc", EffectiveRatio(now))
+end
+
+local function OnFailedQuiet(_, _, unit, castGUID, spellID)
 	if unit ~= "player" then
 		return
 	end
@@ -100,9 +396,54 @@ local function OnFailedQuiet(_, _, unit, _, spellID)
 	if id ~= T.SPELL_ID then
 		return
 	end
+	local now = GetTime()
+	local key = PlainString(castGUID)
+	if key then
+		if key == timing.lastFailGuid then
+			return
+		end
+		timing.lastFailGuid = key
+	end
+	if now == timing.lastAutoStopAt then
+		return
+	end
+	if Channeling(now) or NoLivingTarget() then
+		return
+	end
+
+	local pressAt = key and timing.pressIDs[key] or nil
+	if pressAt and now - pressAt <= T.PRESS_KEEP then
+		if now - pressAt > T.PRESS_NEAR then
+			return
+		end
+		if move.moving then
+			timing.failUndo = { at = now, count = timing.failCount, last = timing.failLast }
+			timing.failCount = timing.failCount + 1
+			timing.failLast = pressAt
+			return
+		end
+		local sinceStop = move.stillSince and (pressAt - move.stillSince) or nil
+		local closeToStop = sinceStop ~= nil and sinceStop >= 0 and sinceStop < StopLead()
+		local cycle = EffectiveCycle(now)
+		local beforeWindup = cycle ~= nil and timing.cycleStart ~= nil
+			and pressAt < (timing.cycleStart + cycle - ns.Windup(now) - T.PRESS_CLEAR)
+		if closeToStop or beforeWindup then
+			timing.failUndo = { at = now, count = timing.failCount, last = timing.failLast }
+			timing.failCount = timing.failCount + 1
+			timing.failLast = pressAt
+		end
+		return
+	end
+
+	if not move.moving and now - timing.blockErrAt <= T.BLOCK_NEAR then
+		timing.heldUp = true
+	end
+	timing.failUndo = { at = now, count = timing.failCount, last = timing.failLast }
 	timing.failCount = timing.failCount + 1
-	timing.failLast = GetTime()
+	timing.failLast = now
 end
+
+local failed = CreateFrame("Frame")
 failed:SetScript("OnEvent", OnFailedQuiet)
 pcall(failed.RegisterEvent, failed, "UNIT_SPELLCAST_FAILED_QUIET")
 
@@ -178,30 +519,47 @@ local function ReadFalling()
 	return ns.PlainTrue(falling)
 end
 
-local function Record(kind, ...)
-	if ns.RecordMovement then
-		ns.RecordMovement(kind, ...)
+local function ReadControlLost()
+	local taxiOK, onTaxi = ns.SafeCall(UnitOnTaxi, "player")
+	if taxiOK and ns.PlainTrue(onTaxi) == true then
+		return false
 	end
+	local ok, full = ns.SafeCall(HasFullControl)
+	if not ok then
+		return false
+	end
+	return ns.PlainTrue(full) == false
 end
 
-local function SetMoving(isMoving, now)
+local function Aiming(now)
+	if move.aimKey and now - move.aimAt > T.AIM_MAX then
+		move.aimKey = nil
+	end
+	return move.aimKey ~= nil
+end
+
+local function SetMoving(isMoving, now, voluntary)
 	if isMoving == move.moving then
 		return
 	end
 	move.moving = isMoving
 	if isMoving then
 		move.movingSince = now
-		if timing.lastShot then
-			timing.moved = true
+		if voluntary then
+			if timing.lastShot then
+				timing.moved = true
+			end
+			ns.OnFeignMove(now)
 		end
-		ns.OnFeignMove(now)
 	else
 		move.stillSince = now
+		Record("ST")
 	end
 end
 
 local function Resolve(now)
-	SetMoving(move.ground or move.airborne, now)
+	local physical = move.ground or move.airborne
+	SetMoving(physical or move.cc, now, physical)
 end
 
 local function ConfirmPending(now)
@@ -213,23 +571,43 @@ local function ConfirmPending(now)
 	local how
 	if speed ~= nil then
 		how = speed > 0 and "speed" or nil
-	elseif held >= T.MOVE_CONFIRM then
+	elseif not Aiming(now) and held >= T.MOVE_CONFIRM then
 		how = "time"
 	end
 	if how then
 		local since = how == "time" and move.pendingSince or now
 		move.pendingSince = nil
 		move.ground = true
-		SetMoving(true, since)
+		SetMoving(true, since, true)
 		Record("MC", how, held)
 	end
 end
 
 local function PollFalling(now)
 	local falling = ReadFalling()
-	if falling ~= nil and falling ~= move.airborne then
-		move.airborne = falling
-		Record("AIR", falling)
+	if falling == true then
+		if not move.airborne then
+			move.airborne = true
+			Record("AIR", true)
+		end
+	elseif falling == false then
+		if move.airborne and (not move.jumpAt or now - move.jumpAt >= T.JUMP_GRACE) then
+			move.airborne = false
+			move.jumpAt = nil
+			Record("AIR", false)
+		end
+	elseif move.airborne and move.jumpAt and now - move.jumpAt >= T.JUMP_GRACE then
+		move.airborne = false
+		move.jumpAt = nil
+		Record("AIR", false)
+	end
+end
+
+local function PollControl()
+	local lost = ReadControlLost()
+	if lost ~= move.cc then
+		move.cc = lost
+		Record("CC", lost)
 	end
 end
 
@@ -237,10 +615,26 @@ function ns.ResetMovement(now)
 	move.moving = false
 	move.ground = false
 	move.airborne = false
+	move.cc = false
+	move.jumpAt = nil
 	move.pendingSince = nil
+	move.aimKey = nil
 	move.stillSince = now
+	timing.channelAt = nil
 	if move.events == 0 and not move.known then
 		move.source = "nothing"
+	end
+end
+
+function ns.OnJump(now)
+	ns.OnFeignMove(now)
+	if ReadFalling() ~= nil then
+		move.jumpAt = now
+		if not move.airborne then
+			move.airborne = true
+			Record("AIR", true)
+		end
+		Resolve(now)
 	end
 end
 
@@ -264,7 +658,9 @@ function ns.OnMovementEvent(isMoving, now)
 end
 
 function ns.PollMovement(now)
+	ExpireHasteBuffs(now)
 	PollFalling(now)
+	PollControl()
 	if move.events > 0 then
 		move.known = true
 		move.source = "events"
@@ -307,40 +703,33 @@ function ns.UpdateLatency(now)
 	end
 end
 
-function ns.Window()
+function ns.Window(now)
 	local extra = (ns.db and ns.db.windowExtra or 0) / 1000
-	local ping = (ns.db and ns.db.addPing) and ns.latency or 0
-	return math.max(T.MIN_WINDOW, ns.Windup() + ping + extra)
+	local ping = AddPingEnabled() and ns.latency or 0
+	return math.max(T.MIN_WINDOW, ns.Windup(now) + ping + extra)
 end
 
-function ns.Windup()
+function ns.Windup(now)
 	if not HasteWindup() then
 		return T.NEED
 	end
-	local ratio = timing.ratio
-	if type(ratio) ~= "number" or ratio <= 0 then
-		return T.NEED
-	end
-	return T.NEED * ratio
+	return T.NEED * EffectiveRatio(now or GetTime())
 end
 
 function ns.NextAttempt(firstAttempt, stop)
+	local reach = stop and (stop + StopLead()) or nil
 	local last = timing.failLast
 	if last and last >= firstAttempt - T.FAILURE_EARLY then
 		local firstRetryAfterStop = last + T.RETRY
-		if stop and stop > firstRetryAfterStop then
-			firstRetryAfterStop = firstRetryAfterStop + math.ceil((stop - firstRetryAfterStop) / T.RETRY) * T.RETRY
+		if reach and reach > firstRetryAfterStop then
+			firstRetryAfterStop = firstRetryAfterStop + math.ceil((reach - firstRetryAfterStop) / T.RETRY) * T.RETRY
 		end
 		return firstRetryAfterStop
 	end
-	if stop and stop > firstAttempt then
-		return firstAttempt + math.ceil((stop - firstAttempt) / T.RETRY) * T.RETRY
+	if reach and reach > firstAttempt then
+		return firstAttempt + math.ceil((reach - firstAttempt) / T.RETRY) * T.RETRY
 	end
 	return firstAttempt
-end
-
-local function CycleOrigin(now)
-	return timing.cycleStart or timing.lastShot or now
 end
 
 function ns.MedianStand()
@@ -370,9 +759,9 @@ function ns.MedianStand()
 	return value
 end
 
-function ns.Need(demo)
+function ns.Need(demo, now)
 	if demo then
-		return ns.Window(), false, 0
+		return ns.Window(now), false, 0
 	end
 	local samples = ns.db and ns.db.calib and ns.db.calib.stand or {}
 	local count = #samples
@@ -380,11 +769,11 @@ function ns.Need(demo)
 		local median = ns.MedianStand()
 		if median then
 			local extra = (ns.db.windowExtra or 0) / 1000
-			local ratio = HasteWindup() and timing.ratio or 1
+			local ratio = HasteWindup() and EffectiveRatio(now or GetTime()) or 1
 			return math.max(T.MIN_WINDOW, median * ratio + extra), true, count
 		end
 	end
-	return ns.Window(), false, count
+	return ns.Window(now), false, count
 end
 
 function ns.Phase(now, demo)
@@ -392,10 +781,10 @@ function ns.Phase(now, demo)
 	local need
 	if demo then
 		cycle = T.DEMO_CYCLE
-		need = ns.Window()
+		need = ns.Window(now)
 	else
-		cycle = timing.cycleOverride or timing.speed
-		need = ns.Need()
+		cycle = EffectiveCycle(now)
+		need = ns.Need(false, now)
 	end
 	if not cycle or cycle <= 0 then
 		return nil
@@ -449,7 +838,8 @@ function ns.StandStill(now, cycle, need, demo)
 		move.moving = false
 		local shot = ns.StandStill(move.movingSince, cycle, need, demo)
 		move.moving = saved
-		if not shot or move.movingSince < shot - T.STOP_GRACE or now > shot then
+		local graceWindow = T.STOP_GRACE + (AddPingEnabled() and ns.latency or 0)
+		if not shot or move.movingSince < shot - graceWindow or now > shot then
 			return nil
 		end
 		grace = true
@@ -458,11 +848,20 @@ function ns.StandStill(now, cycle, need, demo)
 	local start, shotTime
 	local pushed = false
 	if RetryModel() then
-		local windup = ns.Windup()
-		local nextAttempt = ns.NextAttempt(origin + cycle - windup, move.stillSince)
-		pushed = nextAttempt > move.stillSince
-		start = math.max(move.stillSince, nextAttempt)
-		shotTime = start + windup
+		local windup = ns.Windup(now)
+		if timing.autoStartAt and origin + cycle <= timing.autoStartAt then
+			local firstAttempt = timing.autoStartAt
+			local nextAttempt = ns.NextAttempt(firstAttempt, move.stillSince)
+			pushed = nextAttempt > move.stillSince
+			start = math.max(move.stillSince, nextAttempt)
+			local extra = (nextAttempt == firstAttempt and AddPingEnabled()) and ns.latency or 0
+			shotTime = start + windup + extra
+		else
+			local nextAttempt = ns.NextAttempt(origin + cycle - windup, move.stillSince)
+			pushed = nextAttempt > move.stillSince
+			start = math.max(move.stillSince, nextAttempt)
+			shotTime = start + windup
+		end
 	else
 		local swingEnd = origin + cycle
 		local stopBy = swingEnd - need
@@ -537,6 +936,8 @@ local function HealUnreportedStop(now)
 		move.moving = false
 		move.ground = false
 		move.airborne = false
+		move.cc = false
+		move.jumpAt = nil
 		move.pendingSince = nil
 		move.stillSince = now
 		timing.moved = true
@@ -549,6 +950,7 @@ function ns.OnRangedSwing(duration)
 		return
 	end
 	local now = GetTime()
+	ExpireHasteBuffs(now)
 	local reported = ns.PlainNumber(duration)
 	local speed = timing.speed
 	if reported and reported > 0 and reported <= T.MAX_SWING then
@@ -559,15 +961,16 @@ function ns.OnRangedSwing(duration)
 
 	local previous = timing.lastShot
 	local previousSpeed = timing.speed
-	local previousWindup = ns.Windup()
-	local previousRatio = HasteWindup() and (timing.ratio or 1) or 1
+	local previousWindup = ns.Windup(now)
+	local previousRatio = HasteWindup() and EffectiveRatio(now) or 1
 	local previousUnhasted = Unhasted(timing.lastRatio)
+		and not timing.rfHasted and not timing.qsHasted and HasteDelta(now) == 1
 	local gap = previous and (now - previous) or nil
 
 	if previous and previousSpeed and not timing.broken and not timing.heldUp
 		and #timing.haste == 0 and not ns.demoActive and previousUnhasted
 		and move.known and not move.moving and move.stillSince and gap then
-		local need = ns.Need()
+		local need = ns.Need(false, now)
 		local stopBefore = (previous + previousSpeed) - move.stillSince
 		local measured
 		if RetryModel() then
@@ -615,6 +1018,26 @@ function ns.OnRangedSwing(duration)
 	timing.lastRatio = hasteRatio
 	RememberRatio(hasteRatio)
 
+	if timing.qsEnd > 0 and timing.qsBaseSpeed and now > timing.qsProcAt then
+		local baseQS = timing.qsBaseSpeed
+		timing.qsBaseSpeed = nil
+		if speed and speed > baseQS / T.QS_CONFIRM then
+			timing.qsEnd = 0
+			Record("HT", "qs_false", hasteRatio)
+		end
+	end
+
+	local rfJustEnded = timing.rfHasted and (timing.rfEnd == 0 or now >= timing.rfEnd)
+	if timing.qsHasted and timing.qsEnd > 0 and now < timing.qsEnd and previousSpeed and speed
+		and speed > previousSpeed * T.QS_CONFIRM and not rfJustEnded then
+		timing.qsEnd = 0
+		Record("HT", "qs_early_end", hasteRatio)
+	end
+
+	timing.rfHasted = timing.rfEnd > 0 and now < timing.rfEnd
+	timing.qsHasted = timing.qsEnd > 0 and now < timing.qsEnd
+	timing.windupShift = 0
+
 	AppendShotLog({
 		t = Round3(now),
 		speed = Round3(speed or 0),
@@ -632,12 +1055,14 @@ function ns.OnRangedSwing(duration)
 		hasteRatio = hasteRatio,
 	})
 
+	timing.prevSpeed = previousSpeed
 	timing.lastShot = now
 	if speed then
 		timing.speed = speed
 	end
 	timing.cycleStart = now
 	timing.cycleOverride = nil
+	timing.autoStartAt = nil
 	timing.feignArmed = false
 	timing.running = true
 	timing.broken = false
@@ -647,6 +1072,11 @@ function ns.OnRangedSwing(duration)
 	timing.eventsAtShot = move.events
 	timing.failCount = 0
 	timing.failLast = nil
+	timing.failUndo = nil
+
+	if timing.auraAt == now then
+		OnQuickShotsProc(now, previousSpeed, speed)
+	end
 end
 
 function ns.OnMeleeSwing(duration)
@@ -656,16 +1086,129 @@ function ns.OnMeleeSwing(duration)
 	if reported and reported > 0 and reported <= T.MAX_SWING then
 		timing.meleeSpeed = reported
 	end
+	timing.feignArmed = false
 	timing.broken = true
 	if MeleeResets() and timing.speed then
 		timing.cycleStart = now
 		timing.cycleOverride = nil
+		timing.autoStartAt = nil
+		timing.windupShift = 0
+		timing.failCount = 0
+		timing.failLast = nil
 	end
 end
 
-function ns.OnSpellSucceeded(spellID)
-	if ns.PlainNumber(spellID) == T.FEIGN_ID and FeignResets() then
+function ns.OnSpellSent(guid, spellID, now)
+	if ns.PlainNumber(spellID) ~= T.SPELL_ID then
+		return
+	end
+	local key = PlainString(guid)
+	if not key then
+		return
+	end
+	now = now or GetTime()
+	for id, sentAt in pairs(timing.pressIDs) do
+		if now - sentAt > T.PRESS_KEEP then
+			timing.pressIDs[id] = nil
+		end
+	end
+	timing.pressIDs[key] = now
+end
+
+function ns.OnCastStart(guid, spellID, now)
+	now = now or GetTime()
+	timing.feignArmed = false
+	if IsAimedSpell(spellID) then
+		move.aimKey = PlainString(guid) or true
+		move.aimAt = now
+	end
+end
+
+function ns.OnCastEnd(guid, spellID, interrupted, now)
+	now = now or GetTime()
+	local key = PlainString(guid)
+	if move.aimKey and IsAimedSpell(spellID) then
+		local match = key or true
+		if match == true or move.aimKey == true or match == move.aimKey then
+			move.aimKey = nil
+		end
+	end
+	if interrupted and ns.PlainNumber(spellID) == T.SPELL_ID then
+		if key and timing.pressIDs[key] then
+			return
+		end
+		if key then
+			if key == timing.lastInterruptGuid then
+				return
+			end
+			timing.lastInterruptGuid = key
+		end
+		if move.moving and move.movingSince then
+			local sinceMove = now - move.movingSince
+			if sinceMove >= T.INTERRUPT_MIN_LAG and sinceMove <= 0.6 then
+				local anchor = move.movingSince + (T.CANCEL_RETRY - T.RETRY)
+				if not timing.failLast or timing.failLast < move.movingSince then
+					timing.failLast = anchor
+					Record("CI", T.SPELL_ID, anchor)
+				end
+			end
+		end
+	end
+end
+
+function ns.OnSpellSucceeded(spellID, guid, now)
+	now = now or GetTime()
+	ns.OnCastEnd(guid, spellID, false, now)
+	if IsFeignSpell(spellID) and FeignResets() then
 		timing.feignArmed = true
+	end
+	if IsRapidFireSpell(spellID) then
+		timing.rfEnd = now + T.RF_DURATION
+		UpdateWindupShift(now)
+		Record("HT", "rf_start", EffectiveRatio(now))
+	end
+end
+
+function ns.OnChannelState(active, now)
+	now = now or GetTime()
+	timing.channelAt = active and now or nil
+end
+
+local function OnlyRemovedAuras(info)
+	local full = info.isFullUpdate
+	local added = info.addedAuras
+	local updated = info.updatedAuraInstanceIDs
+	local removed = info.removedAuraInstanceIDs
+	if ns.IsSecret(full) or ns.IsSecret(added) or ns.IsSecret(updated) or ns.IsSecret(removed) then
+		return false
+	end
+	return not full and added == nil and updated == nil and removed ~= nil
+end
+
+function ns.OnPlayerAura(updateInfo, now)
+	if type(updateInfo) == "table" then
+		local ok, removedOnly = pcall(OnlyRemovedAuras, updateInfo)
+		if ok and removedOnly == true then
+			return
+		end
+	end
+	now = now or GetTime()
+	timing.auraAt = now
+	if timing.lastShot == now then
+		OnQuickShotsProc(now, timing.prevSpeed, timing.speed)
+	end
+end
+
+function ns.OnErrorMessage(now, first, second)
+	local kind = ns.ClassifyError(first, second)
+	if not kind then
+		return
+	end
+	now = now or GetTime()
+	timing.blockErrAt = now
+	timing.blockErrKind = kind
+	if not move.moving and timing.failLast and now - timing.failLast <= T.BLOCK_NEAR then
+		timing.heldUp = true
 	end
 end
 
@@ -680,14 +1223,36 @@ function ns.OnFeignMove(now)
 	timing.cycleStart = now
 	local base = ns.WeaponBaseSpeed()
 	timing.cycleOverride = base and (base + T.FEIGN_EXTRA) or nil
+	timing.windupShift = 0
 	timing.broken = true
 end
 
-function ns.SetAutoRepeat(running)
-	timing.running = running and true or false
-	timing.autoRepeat = timing.running
-	if timing.running then
-		timing.broken = true
+function ns.SetAutoRepeat(running, now)
+	now = now or GetTime()
+	if running then
+		local sameFrameFlip = (now == timing.lastAutoStopAt) and timing.onBeforeStop
+		local flicker = timing.autoOffAt and (now - timing.autoOffAt < T.AUTO_FLICKER) and timing.onBeforeStop
+		timing.running = true
+		timing.autoRepeat = true
+		if not sameFrameFlip and not flicker then
+			timing.broken = true
+			local cycle = EffectiveCycle(now)
+			if not cycle or now >= CycleOrigin(now) + cycle then
+				timing.autoStartAt = now
+			end
+		end
+	else
+		if timing.failUndo and timing.failUndo.at == now then
+			timing.failCount = timing.failUndo.count
+			timing.failLast = timing.failUndo.last
+			timing.failUndo = nil
+		end
+		timing.onBeforeStop = timing.autoRepeat
+		timing.lastAutoStopAt = now
+		timing.autoOffAt = now
+		timing.autoStartAt = nil
+		timing.running = false
+		timing.autoRepeat = false
 	end
 end
 

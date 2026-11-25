@@ -1,6 +1,6 @@
 local ADDON, ns = ...
 
-local MAX_LINES = 40000
+local MAX_LINES = 100000
 local RANGE_POLL = 0.1
 
 local recorder = CreateFrame("Frame")
@@ -90,8 +90,8 @@ end
 
 function ns.RecordMovement(kind, value, ...)
 	Log(kind, value, ...)
-	if kind == "AIR" and value == false then
-		LogPredictionNextFrame("land")
+	if kind == "ST" then
+		LogPredictionNextFrame("still")
 	end
 end
 
@@ -124,14 +124,45 @@ local HANDLERS = {
 		Log("SW", swingType, duration)
 		LogPredictionNextFrame("swing")
 	end,
-	UNIT_SPELLCAST_FAILED_QUIET = function(unit, _, spellID)
-		if unit == "player" then
-			Log("FQ", spellID)
+	UNIT_SPELLCAST_SENT = function(unit, _, guid, spellID)
+		if unit == "player" and ns.PlainNumber(spellID) == ns.T.SPELL_ID then
+			Log("SN", spellID, guid)
 		end
 	end,
-	UNIT_SPELLCAST_SUCCEEDED = function(unit, _, spellID)
+	UNIT_SPELLCAST_START = function(unit, guid, spellID)
 		if unit == "player" then
-			Log("CS", spellID)
+			Log("CST", spellID, guid)
+		end
+	end,
+	UNIT_SPELLCAST_INTERRUPTED = function(unit, guid, spellID)
+		if unit == "player" then
+			Log("CI", spellID, guid)
+		end
+	end,
+	UNIT_SPELLCAST_FAILED_QUIET = function(unit, guid, spellID)
+		if unit == "player" then
+			Log("FQ", spellID, guid)
+		end
+	end,
+	UNIT_SPELLCAST_SUCCEEDED = function(unit, guid, spellID)
+		if unit == "player" then
+			Log("CS", spellID, guid)
+		end
+	end,
+	UNIT_SPELLCAST_CHANNEL_START = function(unit)
+		if unit == "player" then
+			Log("CH", 1)
+		end
+	end,
+	UNIT_SPELLCAST_CHANNEL_STOP = function(unit)
+		if unit == "player" then
+			Log("CH", 0)
+		end
+	end,
+	UI_ERROR_MESSAGE = function(first, second)
+		local kind = ns.ClassifyError and ns.ClassifyError(first, second) or nil
+		if kind then
+			Log("ER", kind)
 		end
 	end,
 	PLAYER_STARTED_MOVING = function()
@@ -139,7 +170,6 @@ local HANDLERS = {
 	end,
 	PLAYER_STOPPED_MOVING = function()
 		Log("MV", 0, MovementProbe())
-		LogPredictionNextFrame("stop")
 	end,
 	UNIT_RANGEDDAMAGE = function(unit)
 		if unit == "player" then

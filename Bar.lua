@@ -1371,7 +1371,16 @@ local EVENT_LIST = {
 	"PLAYER_REGEN_ENABLED",
 	"PLAYER_STARTED_MOVING",
 	"PLAYER_STOPPED_MOVING",
+	"UNIT_SPELLCAST_SENT",
+	"UNIT_SPELLCAST_START",
+	"UNIT_SPELLCAST_STOP",
+	"UNIT_SPELLCAST_INTERRUPTED",
+	"UNIT_SPELLCAST_FAILED",
 	"UNIT_SPELLCAST_SUCCEEDED",
+	"UNIT_SPELLCAST_CHANNEL_START",
+	"UNIT_SPELLCAST_CHANNEL_STOP",
+	"UNIT_AURA",
+	"UI_ERROR_MESSAGE",
 	"UNIT_RANGEDDAMAGE",
 	"UNIT_ATTACK_SPEED",
 	"BAG_UPDATE_DELAYED",
@@ -1385,8 +1394,8 @@ end
 
 if type(hooksecurefunc) == "function" and type(JumpOrAscendStart) == "function" then
 	pcall(hooksecurefunc, "JumpOrAscendStart", function()
-		if ns.db and ns.OnFeignMove then
-			ns.OnFeignMove(GetTime())
+		if ns.db and ns.OnJump then
+			ns.OnJump(GetTime())
 		end
 	end)
 end
@@ -1438,9 +1447,9 @@ function ns.OnEvent(event, ...)
 			end
 		end
 	elseif event == "START_AUTOREPEAT_SPELL" then
-		ns.SetAutoRepeat(true)
+		ns.SetAutoRepeat(true, now)
 	elseif event == "STOP_AUTOREPEAT_SPELL" then
-		ns.SetAutoRepeat(false)
+		ns.SetAutoRepeat(false, now)
 	elseif event == "PLAYER_ENTER_COMBAT" then
 		ns.SetMeleeAuto(true)
 	elseif event == "PLAYER_LEAVE_COMBAT" or event == "PLAYER_REGEN_ENABLED" then
@@ -1449,11 +1458,48 @@ function ns.OnEvent(event, ...)
 		ns.OnMovementEvent(true, now)
 	elseif event == "PLAYER_STOPPED_MOVING" then
 		ns.OnMovementEvent(false, now)
-	elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
-		local unit, _, spellID = ...
+	elseif event == "UNIT_SPELLCAST_SENT" then
+		local unit, _, guid, spellID = ...
 		if unit == "player" then
-			ns.OnSpellSucceeded(spellID)
+			ns.OnSpellSent(guid, spellID, now)
 		end
+	elseif event == "UNIT_SPELLCAST_START" then
+		local unit, guid, spellID = ...
+		if unit == "player" then
+			ns.OnCastStart(guid, spellID, now)
+		end
+	elseif event == "UNIT_SPELLCAST_STOP" or event == "UNIT_SPELLCAST_FAILED" then
+		local unit, guid, spellID = ...
+		if unit == "player" then
+			ns.OnCastEnd(guid, spellID, false, now)
+		end
+	elseif event == "UNIT_SPELLCAST_INTERRUPTED" then
+		local unit, guid, spellID = ...
+		if unit == "player" then
+			ns.OnCastEnd(guid, spellID, true, now)
+		end
+	elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
+		local unit, guid, spellID = ...
+		if unit == "player" then
+			ns.OnSpellSucceeded(spellID, guid, now)
+		end
+	elseif event == "UNIT_SPELLCAST_CHANNEL_START" then
+		local unit = ...
+		if unit == "player" then
+			ns.OnChannelState(true, now)
+		end
+	elseif event == "UNIT_SPELLCAST_CHANNEL_STOP" then
+		local unit = ...
+		if unit == "player" then
+			ns.OnChannelState(false, now)
+		end
+	elseif event == "UNIT_AURA" then
+		local unit, updateInfo = ...
+		if unit == "player" then
+			ns.OnPlayerAura(updateInfo, now)
+		end
+	elseif event == "UI_ERROR_MESSAGE" then
+		ns.OnErrorMessage(now, ...)
 	elseif event == "UNIT_RANGEDDAMAGE" then
 		local unit = ...
 		if unit == "player" then
