@@ -149,6 +149,32 @@ local function Ask(func, ...)
 	return value
 end
 
+-- C_SwingTimer answers "is the target within my swing range" even in combat, where the
+-- spell and item probes go quiet. true / false, or nil when it can not answer.
+local function SwingTimerInRange()
+	local api = C_SwingTimer
+	local func = api and api.IsTargetWithinSwingRange
+	if type(func) ~= "function" then
+		return nil
+	end
+	local types = Enum and Enum.PlayerSwingType
+	local ranged = types and types.Ranged
+	if ranged == nil then
+		return nil
+	end
+	local ok, value = pcall(func, ranged)
+	if not ok or value == nil or ns.IsSecret(value) then
+		return nil
+	end
+	if value == true then
+		return true
+	end
+	if value == false then
+		return false
+	end
+	return nil
+end
+
 -- One range tick, at most ten times a second (SPEC 8.1).
 function ns.UpdateRange(now)
 	local db = ns.db
@@ -202,28 +228,35 @@ function ns.UpdateRange(now)
 		end
 	end
 
-	local answer = Ask(C_Spell and C_Spell.IsSpellInRange, ns.T.SPELL_ID, "target")
-	if answer == nil then
-		answer = Ask(C_Spell and C_Spell.IsSpellInRange, "Auto Shot", "target")
-	end
-	if answer == nil then
-		answer = Ask(_G.IsSpellInRange, "Auto Shot", "target")
-	end
+	local swing = SwingTimerInRange()
 
 	local state
-	if answer == true or answer == 1 then
+	if swing == true then
 		state = "in"
 	else
-		local interact = Ask(_G.CheckInteractDistance, "target", 3)
-		if interact == true or interact == 1 then
-			state = "close"
-		else
-			state = "far"
+		local answer = Ask(C_Spell and C_Spell.IsSpellInRange, ns.T.SPELL_ID, "target")
+		if answer == nil then
+			answer = Ask(C_Spell and C_Spell.IsSpellInRange, "Auto Shot", "target")
 		end
+		if answer == nil then
+			answer = Ask(_G.IsSpellInRange, "Auto Shot", "target")
+		end
+
+		if answer == true or answer == 1 then
+			state = "in"
+		elseif swing == false or answer == false or answer == 0 then
+			local interact = Ask(_G.CheckInteractDistance, "target", 3)
+			if interact == true or interact == 1 then
+				state = "close"
+			else
+				state = "far"
+			end
+		end
+		-- No probe answered: the range stays unknown, so the bar claims nothing about it.
 	end
 
 	range.state = state
-	if db.rangeDistance ~= "off" then
+	if state and db.rangeDistance ~= "off" then
 		range.lo, range.hi = ns.ComputeBracket(state)
 		range.distance = ns.FormatDistance(state, range.lo, range.hi)
 	else
