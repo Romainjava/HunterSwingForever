@@ -96,16 +96,32 @@ end
 failed:SetScript("OnEvent", OnFailedQuiet)
 pcall(failed.RegisterEvent, failed, "UNIT_SPELLCAST_FAILED_QUIET")
 
+-- The client's own word for "Speed" (SPEED is a Blizzard global string: "Vitesse",
+-- "Tempo", "Velocidad"...), so a non-English tooltip is read too; English as fallback.
+local function SpeedLabels()
+	local labels = { "Speed" }
+	local localized = rawget(_G, "SPEED")
+	if type(localized) == "string" and localized ~= "" and localized ~= "Speed" then
+		table.insert(labels, 1, localized)
+	end
+	return labels
+end
+
 local function SpeedFromLines(lines)
 	if type(lines) ~= "table" then
 		return nil
 	end
+	local labels = SpeedLabels()
 	for _, line in ipairs(lines) do
 		if type(line) == "table" then
 			for _, key in ipairs({ "leftText", "rightText" }) do
 				local text = line[key]
+				local speed
 				if type(text) == "string" then
-					local speed = string.match(text, "Speed%s+(%d+[%.,]%d+)")
+					for _, label in ipairs(labels) do
+						local escaped = string.gsub(label, "(%p)", "%%%1")
+						speed = speed or string.match(text, escaped .. "[%s\194\160]*:?[%s\194\160]*(%d+[%.,]%d+)")
+					end
 					if speed then
 						return ns.PlainNumber(tonumber((string.gsub(speed, ",", "."))))
 					end
