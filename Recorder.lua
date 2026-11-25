@@ -82,8 +82,15 @@ local function LogPrediction(reason)
 		timing.cycleStart, timing.ratio, ns.latency)
 end
 
+local pendingPredictions = {}
+
 local function LogPredictionNextFrame(reason)
+	if pendingPredictions[reason] then
+		return
+	end
+	pendingPredictions[reason] = true
 	C_Timer.After(0, function()
+		pendingPredictions[reason] = nil
 		LogPrediction(reason)
 	end)
 end
@@ -127,6 +134,7 @@ local HANDLERS = {
 	UNIT_SPELLCAST_SENT = function(unit, _, guid, spellID)
 		if unit == "player" and ns.PlainNumber(spellID) == ns.T.SPELL_ID then
 			Log("SN", spellID, guid)
+			LogPredictionNextFrame("press")
 		end
 	end,
 	UNIT_SPELLCAST_START = function(unit, guid, spellID)
@@ -142,6 +150,9 @@ local HANDLERS = {
 	UNIT_SPELLCAST_FAILED_QUIET = function(unit, guid, spellID)
 		if unit == "player" then
 			Log("FQ", spellID, guid)
+			if ns.PlainNumber(spellID) == ns.T.SPELL_ID then
+				LogPredictionNextFrame("fail")
+			end
 		end
 	end,
 	UNIT_SPELLCAST_SUCCEEDED = function(unit, guid, spellID)
@@ -183,6 +194,7 @@ local HANDLERS = {
 	end,
 	START_AUTOREPEAT_SPELL = function()
 		Log("AR", 1)
+		LogPredictionNextFrame("start")
 	end,
 	STOP_AUTOREPEAT_SPELL = function()
 		Log("AR", 0)

@@ -16,11 +16,9 @@ local T = {
 	GAPS_MAX = 10,
 	DEMO_CYCLE = 3.0,
 	RETRY = 0.5,
-	CANCEL_RETRY = 0.7,
 	INTERRUPT_MIN_LAG = 0.04,
-	FAILURE_EARLY = 0.25,
+	FAILURE_EARLY = 0.5,
 	FEIGN_ID = 5384,
-	FEIGN_EXTRA = 0.15,
 	STOP_GRACE = 0.1,
 	STOP_LEAD = 0.06,
 	MOVE_CONFIRM = 0.03,
@@ -31,6 +29,7 @@ local T = {
 	PRESS_KEEP = 5,
 	PRESS_NEAR = 0.05,
 	PRESS_CLEAR = 0.15,
+	PRESS_WINDUP_GRACE = 0.25,
 	BLOCK_NEAR = 0.2,
 	RF_ID = 3045,
 	RF_HASTE = 1.4,
@@ -107,6 +106,8 @@ local timing = {
 	lastInterruptGuid = nil,
 	failUndo = nil,
 	pressIDs = {},
+	pressWindupAt = nil,
+	pressWindupGuid = nil,
 	blockErrAt = -1,
 	blockErrKind = nil,
 	channelAt = nil,
@@ -388,6 +389,11 @@ local function OnQuickShotsProc(now, previousSpeed, currentSpeed)
 	Record("HT", "qs_proc", EffectiveRatio(now))
 end
 
+local function ClearPressWindup()
+	timing.pressWindupAt = nil
+	timing.pressWindupGuid = nil
+end
+
 local function OnFailedQuiet(_, _, unit, castGUID, spellID)
 	if unit ~= "player" then
 		return
@@ -398,6 +404,9 @@ local function OnFailedQuiet(_, _, unit, castGUID, spellID)
 	end
 	local now = GetTime()
 	local key = PlainString(castGUID)
+	if key and key == timing.pressWindupGuid then
+		ClearPressWindup()
+	end
 	if key then
 		if key == timing.lastFailGuid then
 			return
@@ -545,6 +554,12 @@ local function SetMoving(isMoving, now, voluntary)
 	move.moving = isMoving
 	if isMoving then
 		move.movingSince = now
+		if timing.pressWindupAt then
+			local graceWindow = T.STOP_GRACE + (AddPingEnabled() and ns.latency or 0)
+			if now < timing.pressWindupAt + ns.Windup(now) - graceWindow then
+				ClearPressWindup()
+			end
+		end
 		if voluntary then
 			if timing.lastShot then
 				timing.moved = true
@@ -621,6 +636,7 @@ function ns.ResetMovement(now)
 	move.aimKey = nil
 	move.stillSince = now
 	timing.channelAt = nil
+	ClearPressWindup()
 	if move.events == 0 and not move.known then
 		move.source = "nothing"
 	end
@@ -849,7 +865,10 @@ function ns.StandStill(now, cycle, need, demo)
 	local pushed = false
 	if RetryModel() then
 		local windup = ns.Windup(now)
-		if timing.autoStartAt and origin + cycle <= timing.autoStartAt then
+		if timing.pressWindupAt and now - timing.pressWindupAt <= windup + T.PRESS_WINDUP_GRACE then
+			start = timing.pressWindupAt
+			shotTime = start + windup
+		elseif timing.autoStartAt and origin + cycle <= timing.autoStartAt then
 			local firstAttempt = timing.autoStartAt
 			local nextAttempt = ns.NextAttempt(firstAttempt, move.stillSince)
 			pushed = nextAttempt > move.stillSince
@@ -1073,6 +1092,7 @@ function ns.OnRangedSwing(duration)
 	timing.failCount = 0
 	timing.failLast = nil
 	timing.failUndo = nil
+	ClearPressWindup()
 
 	if timing.auraAt == now then
 		OnQuickShotsProc(now, previousSpeed, speed)
@@ -1095,6 +1115,7 @@ function ns.OnMeleeSwing(duration)
 		timing.windupShift = 0
 		timing.failCount = 0
 		timing.failLast = nil
+		ClearPressWindup()
 	end
 end
 
@@ -1113,6 +1134,13 @@ function ns.OnSpellSent(guid, spellID, now)
 		end
 	end
 	timing.pressIDs[key] = now
+	if not move.moving and not Channeling(now) and not NoLivingTarget() then
+		local active = timing.pressWindupAt and now - timing.pressWindupAt <= ns.Windup(now) + T.PRESS_WINDUP_GRACE
+		if not active then
+			timing.pressWindupAt = now
+			timing.pressWindupGuid = key
+		end
+	end
 end
 
 function ns.OnCastStart(guid, spellID, now)
@@ -1134,6 +1162,9 @@ function ns.OnCastEnd(guid, spellID, interrupted, now)
 		end
 	end
 	if interrupted and ns.PlainNumber(spellID) == T.SPELL_ID then
+		if key and key == timing.pressWindupGuid then
+			ClearPressWindup()
+		end
 		if key and timing.pressIDs[key] then
 			return
 		end
@@ -1146,10 +1177,9 @@ function ns.OnCastEnd(guid, spellID, interrupted, now)
 		if move.moving and move.movingSince then
 			local sinceMove = now - move.movingSince
 			if sinceMove >= T.INTERRUPT_MIN_LAG and sinceMove <= 0.6 then
-				local anchor = move.movingSince + (T.CANCEL_RETRY - T.RETRY)
 				if not timing.failLast or timing.failLast < move.movingSince then
-					timing.failLast = anchor
-					Record("CR", T.SPELL_ID, anchor)
+					timing.failLast = now
+					Record("CR", T.SPELL_ID, now)
 				end
 			end
 		end
@@ -1159,8 +1189,15 @@ end
 function ns.OnSpellSucceeded(spellID, guid, now)
 	now = now or GetTime()
 	ns.OnCastEnd(guid, spellID, false, now)
-	if IsFeignSpell(spellID) and FeignResets() then
-		timing.feignArmed = true
+	if IsFeignSpell(spellID) and FeignResets() and timing.speed then
+		timing.cycleStart = now
+		timing.cycleOverride = nil
+		timing.autoStartAt = nil
+		timing.windupShift = 0
+		timing.failCount = 0
+		timing.failLast = nil
+		ClearPressWindup()
+		timing.broken = true
 	end
 	if IsRapidFireSpell(spellID) then
 		timing.rfEnd = now + T.RF_DURATION
@@ -1221,8 +1258,7 @@ function ns.OnFeignMove(now)
 		return
 	end
 	timing.cycleStart = now
-	local base = ns.WeaponBaseSpeed()
-	timing.cycleOverride = base and (base + T.FEIGN_EXTRA) or nil
+	timing.cycleOverride = nil
 	timing.windupShift = 0
 	timing.broken = true
 end
@@ -1253,6 +1289,7 @@ function ns.SetAutoRepeat(running, now)
 		timing.autoStartAt = nil
 		timing.running = false
 		timing.autoRepeat = false
+		ClearPressWindup()
 	end
 end
 

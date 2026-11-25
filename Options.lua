@@ -475,7 +475,7 @@ local function BuildWindow()
 	CheckRow(left, "retryModel", "0.5 s retry", "A shot refused because you were still moving is tried again 0.5 s later: the bar waits for that retry instead of predicting a shot you cannot make.",
 		"hasteWindup", "Haste wind-up", "Rapid Fire and Quick Shots shorten the 0.5 s wind-up, so the red window and the learned stand-still time shrink with it.")
 	CheckRow(left, "meleeResetsRanged", "Melee restarts the timer", "A main-hand or off-hand swing starts a new Auto Shot swing, so the bar counts from that swing instead of waiting on a late shot.",
-		"feignResetsRanged", "Feign Death restarts", "After Feign Death, your first move or jump restarts the Auto Shot swing at the weapon's base speed + 0.15 s.")
+		"feignResetsRanged", "Feign Death restarts", "Casting Feign Death restarts the Auto Shot swing.")
 	Heading(left, "Ammo vendors on the map")
 	CheckRow(left, "vendorPins", "World map", "Every NPC that sells arrows or bullets, coloured by faction. Hover for what they sell, click for a waypoint.",
 		"vendorMinimap", "Minimap", "The same vendors on the minimap when they are near you. Hidden in combat. Click one for a waypoint.")
