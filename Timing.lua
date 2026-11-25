@@ -17,6 +17,8 @@ local T = {
 	LOG_MAX = 40,
 	GAPS_MAX = 10,
 	DEMO_CYCLE = 3.0,
+	RETRY = 0.5,
+	FAILURE_EARLY = 0.25,
 }
 ns.T = T
 
@@ -47,6 +49,8 @@ local timing = {
 	gaps = {},
 	failCount = 0,
 	failLast = nil,
+	ratio = 1, -- swing speed / weapon base speed, locked for the current swing
+	cycleStart = nil, -- the current swing can be restarted by a melee swing
 }
 ns.timing = timing
 
@@ -57,6 +61,19 @@ local function Round3(value)
 		return nil
 	end
 	return math.floor(value * 1000 + 0.5) / 1000
+end
+
+-- The three prediction rules, each with its own option (default on).
+local function RetryModel()
+	return not (ns.db and ns.db.retryModel == false)
+end
+
+local function MeleeResets()
+	return not (ns.db and ns.db.meleeResetsRanged == false)
+end
+
+local function HasteWindup()
+	return not (ns.db and ns.db.hasteWindup == false)
 end
 
 ----------------------------------------------------------------------------
@@ -212,7 +229,37 @@ end
 function ns.Window()
 	local extra = (ns.db and ns.db.windowExtra or 0) / 1000
 	local ping = (ns.db and ns.db.addPing) and ns.latency or 0
-	return math.max(T.MIN_WINDOW, T.NEED + ping + extra)
+	return math.max(T.MIN_WINDOW, ns.Windup() + ping + extra)
+end
+
+-- The wind-up of the current swing: 0.5 s, shorter when ranged haste is on.
+function ns.Windup()
+	if not HasteWindup() then
+		return T.NEED
+	end
+	local ratio = timing.ratio
+	if type(ratio) ~= "number" or ratio <= 0 then
+		return T.NEED
+	end
+	return T.NEED * ratio
+end
+
+-- When the game makes its next Auto Shot attempt for a player who stops at `stop`.
+-- A refusal up to 0.25 s before the first attempt counts as that attempt.
+function ns.NextAttempt(firstAttempt, stop)
+	local last = timing.failLast
+	if last and last >= firstAttempt - T.FAILURE_EARLY then
+		return last + T.RETRY
+	end
+	if stop and stop > firstAttempt then
+		return firstAttempt + math.ceil((stop - firstAttempt) / T.RETRY) * T.RETRY
+	end
+	return firstAttempt
+end
+
+-- Where the current swing counts from: a melee swing can restart it (rule 2).
+local function CycleOrigin(now)
+	return timing.cycleStart or timing.lastShot or now
 end
 
 function ns.MedianStand()
@@ -252,7 +299,8 @@ function ns.Need(demo)
 		local median = ns.MedianStand()
 		if median then
 			local extra = (ns.db.windowExtra or 0) / 1000
-			return math.max(T.MIN_WINDOW, median + extra), true, count
+			local ratio = HasteWindup() and timing.ratio or 1
+			return math.max(T.MIN_WINDOW, median * ratio + extra), true, count
 		end
 	end
 	return ns.Window(), false, count
@@ -282,7 +330,7 @@ function ns.Phase(now, demo)
 	if demo then
 		elapsed = now - (now - now % cycle)
 	else
-		elapsed = now - (timing.lastShot or now)
+		elapsed = now - CycleOrigin(now)
 	end
 
 	local info = {
@@ -316,15 +364,27 @@ function ns.StandStill(now, cycle, need, demo)
 	if not move.known or move.moving or not move.stillSince then
 		return nil
 	end
-	local swingEnd = (timing.lastShot or now) + cycle
-	local stopBy = swingEnd - need
-	local shotTime, start
-	if move.stillSince <= stopBy then
-		shotTime = swingEnd
-		start = stopBy
+	local origin = CycleOrigin(now)
+	local start, shotTime
+	local pushed = false
+	if RetryModel() then
+		-- The game tries again every 0.5 s while the player is moving; the wind-up
+		-- only begins once an attempt lands.
+		local windup = ns.Windup()
+		local nextAttempt = ns.NextAttempt(origin + cycle - windup, move.stillSince)
+		pushed = nextAttempt > move.stillSince
+		start = math.max(move.stillSince, nextAttempt)
+		shotTime = start + windup
 	else
-		shotTime = move.stillSince + need
-		start = move.stillSince
+		local swingEnd = origin + cycle
+		local stopBy = swingEnd - need
+		if move.stillSince <= stopBy then
+			shotTime = swingEnd
+			start = stopBy
+		else
+			shotTime = move.stillSince + need
+			start = move.stillSince
+		end
 	end
 	local left = shotTime - now
 	local progress
@@ -333,7 +393,7 @@ function ns.StandStill(now, cycle, need, demo)
 	else
 		progress = math.max(0, math.min(1, (now - start) / (shotTime - start)))
 	end
-	return shotTime, start, left, progress
+	return shotTime, start, left, progress, pushed
 end
 
 ---------------------------------------------------------------------------
@@ -379,6 +439,8 @@ function ns.OnRangedSwing(duration)
 
 	local previous = timing.lastShot
 	local previousSpeed = timing.speed
+	local previousWindup = ns.Windup()
+	local previousRatio = HasteWindup() and (timing.ratio or 1) or 1
 	local gap = previous and (now - previous) or nil
 
 	-- Learn from the swing that just ended (SPEC 7.5).
@@ -387,10 +449,17 @@ function ns.OnRangedSwing(duration)
 		and move.known and not move.moving and move.stillSince and gap then
 		local need = ns.Need()
 		local stopBefore = (previous + previousSpeed) - move.stillSince
-		local measured = now - move.stillSince
+		local measured
+		if RetryModel() then
+			-- Measure the wind-up as the game applies it: a retry can push the start.
+			local firstAttempt = previous + previousSpeed - previousWindup
+			measured = now - math.max(move.stillSince, ns.NextAttempt(firstAttempt, move.stillSince))
+		else
+			measured = now - move.stillSince
+		end
 		if stopBefore < need and measured >= T.SAMPLE_MIN and measured <= T.SAMPLE_MAX then
 			local samples = db.calib.stand
-			samples[#samples + 1] = Round3(measured)
+			samples[#samples + 1] = Round3(measured / previousRatio)
 			while #samples > T.CALIB_MAX do
 				table.remove(samples, 1)
 			end
@@ -424,6 +493,8 @@ function ns.OnRangedSwing(duration)
 	if base and base > 0 and speed and speed > 0 then
 		hasteRatio = Round3(speed / base)
 	end
+	-- Locked for the swing that starts now: the wind-up follows this ratio.
+	timing.ratio = hasteRatio or 1
 
 	AppendShotLog({
 		t = Round3(now),
@@ -446,6 +517,7 @@ function ns.OnRangedSwing(duration)
 	if speed then
 		timing.speed = speed
 	end
+	timing.cycleStart = now
 	timing.running = true
 	timing.broken = false
 	timing.heldUp = false
@@ -464,6 +536,10 @@ function ns.OnMeleeSwing(duration)
 		timing.meleeSpeed = reported
 	end
 	timing.broken = true
+	-- A melee swing restarts the Auto Shot swing from the melee swing time.
+	if MeleeResets() and timing.speed then
+		timing.cycleStart = now
+	end
 end
 
 function ns.SetAutoRepeat(running)

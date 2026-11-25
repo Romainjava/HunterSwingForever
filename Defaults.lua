@@ -34,6 +34,9 @@ local DEFAULTS = {
 	rangeWhenIdle = true,
 	rangePosition = "belowRight",
 	rangeDistance = "bracket",
+	retryModel = true,
+	meleeResetsRanged = true,
+	hasteWindup = true,
 	vendorPins = true,
 	vendorMinimap = true,
 	vendorContinent = true,
@@ -48,7 +51,7 @@ local DEFAULTS = {
 		text = { 0.95, 0.95, 0.95, 1 },
 		melee = { 1.00, 0.78, 0.30, 1 },
 	},
-	configVersion = 4,
+	configVersion = 5,
 	calib = { stand = {}, early = {}, missed = {} },
 	shotLog = {},
 }
@@ -360,9 +363,16 @@ function ns.LoadSaved()
 		db.vendorAlliance = nil
 		db.vendorHorde = nil
 	end
+	if version < 5 then
+		-- The stand-still time now measures the wind-up after the game's retry, so the
+		-- samples taken by 1.0.0 are not comparable: drop them and learn again.
+		if type(db.calib) == "table" then
+			db.calib.stand = {}
+		end
+	end
 
 	Merge(db, DEFAULTS)
-	db.configVersion = 4
+	db.configVersion = 5
 
 	local calib = db.calib
 	db.calib = {
@@ -385,7 +395,7 @@ function ns.ResetSaved()
 
 	local db = {}
 	Merge(db, DEFAULTS)
-	db.configVersion = 4
+	db.configVersion = 5
 	db.point = keepPoint
 	db.calib = { stand = CleanMeasures(keepCalib.stand), early = CleanMeasures(keepCalib.early), missed = CleanMeasures(keepCalib.missed) }
 	db.shotLog = CleanShotLog(keepLog)

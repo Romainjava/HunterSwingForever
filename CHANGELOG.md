@@ -19,6 +19,12 @@ vendors on the map.
 - The stand-still time is learned from your own shots (median of the last nine), so the
   red window follows your latency; until three shots are learned it uses 0.5 s plus your
   ping.
+- A late shot is predicted the way the game retries it: Auto Shot is tried again 0.5 s
+  after a refusal, so the bar waits for that retry instead of promising a shot you cannot
+  make. A melee swing restarts the Auto Shot swing, and the stand-still time follows ranged
+  haste (Rapid Fire, Quick Shots). Each of the three can be turned off in the options.
+- The learned stand-still time relearns once after this update: the old measurements were
+  taken with the old rule.
 
 ### Extras
 
@@ -68,6 +74,12 @@ Forever, avec les vendeurs de munitions sur la carte du monde.
 - Le temps d'immobilité est appris de vos propres tirs (médiane des neuf derniers), donc la
   fenêtre rouge suit votre latence ; avant trois tirs appris, elle vaut 0,5 s plus votre
   ping.
+- Un tir en retard est prédit comme le jeu le retente : Auto Shot est retenté 0,5 s après un
+  refus, donc la barre attend ce nouvel essai au lieu de promettre un tir impossible. Un
+  coup au corps à corps relance le tir automatique, et le temps d'immobilité suit la hâte à
+  distance (Rapid Fire, Quick Shots). Chacun des trois se désactive dans les options.
+- Le temps d'immobilité appris se réapprend une fois après cette mise à jour : les anciennes
+  mesures suivaient l'ancienne règle.
 
 #### En plus
 

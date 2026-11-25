@@ -671,7 +671,7 @@ local function AutoState(now, demo)
 		return state
 	end
 
-	local shotTime, standStart, standLeft, progress = ns.StandStill(now, phase.cycle, phase.need)
+	local shotTime, standStart, standLeft, progress, retryWait = ns.StandStill(now, phase.cycle, phase.need)
 	state.shotTime, state.standStart, state.standLeft, state.standProgress = shotTime, standStart, standLeft, progress
 	state.moving = ns.move.moving
 	state.known = ns.move.known
@@ -682,7 +682,7 @@ local function AutoState(now, demo)
 		state.countdown = CountdownText(phase.left, 1)
 	elseif phase.phase == "stand" then
 		state.status = "STAND STILL"
-		state.countdown = CountdownText(phase.left, 1)
+		state.countdown = CountdownText((retryWait and standLeft) or phase.left, 1)
 	else
 		if state.held == "close" then
 			state.status = "TOO CLOSE"
