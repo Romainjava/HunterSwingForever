@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.0.1 - 2026-11-26
+
+Major Auto Shot timing accuracy update aligned with WoW Forever mechanics.
+
+- Ignore fake movement bursts (including during Aimed Shot casts) by confirming real movement via speed or a 30 ms hold filter.
+- Jump shots stay marked as moving from jump press until landing (`IsFalling` with a 0.1 s jump grace), starting the stand-still window cleanly on touchdown.
+- Account for server stop-seen latency (`ping + 0.06 s`) when predicting 0.5 s retry ticks after stopping, and honor refusals up to 0.5 s before the windup.
+- Track accepted manual `!Auto Shot` presses so the bar immediately shows the active windup instead of waiting for the next server retry tick.
+- Anchor interrupted windups directly on the cancel event so the next retry aligns 0.5 s later, and anchor cold starts when starting Auto Shot from rest (pulls, post-Aimed Shot).
+- Deduplicate and filter quiet Auto Shot failures by cast ID (ignoring spam presses, same-frame stop/start macro flickers, channeling, and missing/dead targets), and detect range/facing/line-of-sight holds.
+- Track Rapid Fire and Quick Shots haste immediately in combat, shrinking the windup mid-cycle and restoring unhasted speed when the buff expires.
+- Handle loss of control (`HasFullControl`, excluding taxis) without falsely marking movement or triggering Feign Death resets.
+- Feign Death now restarts the Auto Shot swing at cast time using the current swing speed instead of waiting for get-up + 0.15 s.
+
+### Français
+
+Grosse mise à jour de précision du timer Auto Shot, recalée sur le comportement réel de WoW Forever.
+
+- Ignore les fausses rafales de mouvement (y compris pendant l'incantation de Visée) en confirmant les vrais déplacements par la vitesse ou un seuil de 30 ms.
+- Les tirs en saut restent considérés en mouvement dès l'appui sur Saut jusqu'à l'atterrissage (`IsFalling` avec 0,1 s de marge), et la fenêtre d'immobilité repart proprement au contact du sol.
+- Prend en compte le délai serveur de prise en compte de l'arrêt (`ping + 0,06 s`) pour les relances toutes les 0,5 s, et recale aussi les refus survenant jusqu'à 0,5 s avant la mise en joue.
+- Suit les appuis manuels acceptés sur `!Auto Shot` pour afficher immédiatement la mise en joue active au lieu d'attendre la prochaine relance serveur.
+- Recale les mises en joue annulées par un mouvement directement sur l'interruption (relance 0,5 s plus tard) et ancre les départs à froid depuis l'arrêt (pulls, sortie de Visée).
+- Déduplique et filtre les refus silencieux d'Auto Shot par identifiant de sort (ignore les appuis répétés, les macros stop/start dans la même image, les canalisations et l'absence de cible vivante), et détecte les blocages de portée, d'orientation ou de ligne de vue.
+- Suit Tir rapide et Quick Shots immédiatement en combat, raccourcissant la mise en joue en cours de cycle et rétablissant la vitesse normale à la fin du buff.
+- Gère les pertes de contrôle (`HasFullControl`, hors taxi) sans fausser la détection de mouvement ni déclencher Feindre la mort.
+- Feindre la mort relance désormais le cycle Auto Shot au lancement du sort à la vitesse actuelle au lieu d'attendre le lever + 0,15 s.
+
 ## 1.0.0 - 2026-11-25
 
 First public release: an Auto Shot rhythm bar for hunters on WoW Forever, plus ammo

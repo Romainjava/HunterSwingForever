@@ -4,7 +4,7 @@
 ## Notes-frFR: Barre d'Auto Shot : quand bouger et quand rester immobile pour le prochain tir. Vendeurs de munitions sur la carte du monde et sur la minicarte. /hsf
 ## Author: Illusion (Romainjava)
 ## IconTexture: Interface\AddOns\HunterSwingForever\Icon.tga
-## Version: 1.0.0
+## Version: 1.0.1
 ## SavedVariables: HunterSwingForeverDB
 ## X-Category: Hunter
 
