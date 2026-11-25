@@ -1,5 +1,3 @@
--- Hunter Swing Forever by Illusion
--- Unit 10: the options window and the Options -> AddOns page.
 local ADDON, ns = ...
 
 local options = {
@@ -8,10 +6,6 @@ local options = {
 ns.options = options
 
 local COLUMN_WIDTH = 270
-
----------------------------------------------------------------------------
--- Widgets
----------------------------------------------------------------------------
 
 local function AttachTooltip(widget, titleText, bodyText)
 	if not bodyText then
@@ -332,10 +326,6 @@ local function AddSwatch(parent, x, y, labelText, key, withAlpha)
 	return button
 end
 
----------------------------------------------------------------------------
--- The window
----------------------------------------------------------------------------
-
 local function TryCreateFrame(template)
 	if template then
 		local ok, frame = pcall(CreateFrame, "Frame", "HunterSwingForeverOptions", UIParent, template)
@@ -353,7 +343,6 @@ local function BuildWindow()
 
 	local frame = TryCreateFrame("DefaultPanelFlatTemplate")
 	if not (frame.NineSlice or frame.Bg or frame.Inset) then
-		-- The flat template is missing or empty: use the plain frame and paint a background.
 		frame = CreateFrame("Frame", "HunterSwingForeverOptions", UIParent)
 	end
 	options.frame = frame
@@ -406,7 +395,6 @@ local function BuildWindow()
 		ns.SetDemo(false)
 	end)
 
-	-- Bottom bar
 	local resetPosition = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 	resetPosition:SetSize(120, 22)
 	resetPosition:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 16, 14)
@@ -440,7 +428,6 @@ local function BuildWindow()
 	hint:SetPoint("BOTTOM", frame, "BOTTOM", 0, 42)
 	hint:SetText("Drag the bar to move it while this window is open.")
 
-	-- Columns -----------------------------------------------------------
 	local function NewColumn(x)
 		return { frame = frame, x = x, y = -34 }
 	end
@@ -476,7 +463,6 @@ local function BuildWindow()
 		column.y = column.y - 24
 	end
 
-	-- Left column
 	local left = NewColumn(16)
 	Heading(left, "Layout & size")
 	Choice(left, "layout", ns.LAYOUTS)
@@ -498,7 +484,6 @@ local function BuildWindow()
 	CheckRow(left, "vendorOtherFaction", "Other faction", "Also show the other side's vendors. They will not sell to you. Your own side is always shown.")
 	Choice(left, "vendorAmmo", ns.VENDOR_AMMO_MODES)
 
-	-- Middle column
 	local middle = NewColumn(310)
 	Heading(middle, "Text")
 	Choice(middle, "font", ns.FONTS)
@@ -511,7 +496,6 @@ local function BuildWindow()
 	Swatches(middle, "text", "Countdown", false, "melee", "Melee", false)
 	Choice(middle, "texture", ns.TEXTURES)
 
-	-- Right column
 	local right = NewColumn(604)
 	Heading(right, "Show")
 	CheckRow(right, "showStatus", "Status text", "MOVE / STAND STILL / STOP.", "showCountdown", "Countdown", "Seconds left in the current phase.")
@@ -566,10 +550,6 @@ function ns.ToggleOptions()
 		ns.OpenOptions()
 	end
 end
-
----------------------------------------------------------------------------
--- Options -> AddOns page (canvas, never hides the Settings panel)
----------------------------------------------------------------------------
 
 local function BuildBlizzardPage()
 	if options.page then

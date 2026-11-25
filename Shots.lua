@@ -1,5 +1,3 @@
--- Hunter Swing Forever by Illusion
--- Unit 4: the Auto Shots to kill estimate.
 local ADDON, ns = ...
 
 local shots = {

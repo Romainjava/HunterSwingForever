@@ -1,10 +1,8 @@
--- Hunter Swing Forever by Illusion
--- Unit 3: the range check (in range / too close / out of range) and the distance estimate.
 local ADDON, ns = ...
 
 local range = {
-	state = nil, -- raw answer of this tick
-	held = nil, -- answer the bar follows (debounced)
+	state = nil,
+	held = nil,
 	pending = nil,
 	pendingSince = 0,
 	last = 0,
@@ -30,7 +28,6 @@ local RANGE_COLOURS = {
 }
 ns.RANGE_COLOURS = RANGE_COLOURS
 
--- Yards -> item ids that answer "is the target within my range" (SPEC 8.3).
 local DISTANCE_STEPS = {
 	{ 5, { 8149, 15826, 16308, 17117 } },
 	{ 10, { 9606, 9618, 9619, 9620 } },
@@ -149,9 +146,7 @@ local function Ask(func, ...)
 	return value
 end
 
--- C_SwingTimer answers "is the target within my swing range" even in combat, where the
--- spell and item probes go quiet. true / false, or nil when it can not answer.
-local function SwingTimerInRange()
+local function CombatSafeInRange()
 	local api = C_SwingTimer
 	local func = api and api.IsTargetWithinSwingRange
 	if type(func) ~= "function" then
@@ -175,7 +170,6 @@ local function SwingTimerInRange()
 	return nil
 end
 
--- One range tick, at most ten times a second (SPEC 8.1).
 function ns.UpdateRange(now)
 	local db = ns.db
 	if not db then
@@ -228,7 +222,7 @@ function ns.UpdateRange(now)
 		end
 	end
 
-	local swing = SwingTimerInRange()
+	local swing = CombatSafeInRange()
 
 	local state
 	if swing == true then
@@ -252,7 +246,6 @@ function ns.UpdateRange(now)
 				state = "far"
 			end
 		end
-		-- No probe answered: the range stays unknown, so the bar claims nothing about it.
 	end
 
 	range.state = state
@@ -267,7 +260,6 @@ function ns.UpdateRange(now)
 		ns.timing.heldUp = true
 	end
 
-	-- The bar follows a flipped answer only after it held for 0.2 s.
 	if range.held == state then
 		range.pending = state
 		range.pendingSince = now

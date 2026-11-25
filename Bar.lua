@@ -1,5 +1,3 @@
--- Hunter Swing Forever by Illusion
--- Unit 9: the bar (frames, per-frame update, events, slash command).
 local ADDON, ns = ...
 
 local GAP = 4
@@ -26,10 +24,6 @@ end
 local function Smooth(t)
 	return t * t * (3 - 2 * t)
 end
-
----------------------------------------------------------------------------
--- Small drawing helpers
----------------------------------------------------------------------------
 
 local function Solid(parent, layer, subLevel)
 	local texture
@@ -121,10 +115,6 @@ local function UpdateFade(part, show, dt)
 	return alpha
 end
 
----------------------------------------------------------------------------
--- Frame construction
----------------------------------------------------------------------------
-
 function ns.BuildBar()
 	if bar.frame then
 		return
@@ -165,7 +155,6 @@ function ns.BuildBar()
 	rangePart:Hide()
 	bar.parts.range.frame = rangePart
 
-	-- Main bar -----------------------------------------------------------
 	local statusBar = CreateFrame("StatusBar", nil, timerPart)
 	statusBar:SetMinMaxValues(0, 1)
 	statusBar:SetValue(0)
@@ -227,7 +216,6 @@ function ns.BuildBar()
 	borders.right:SetWidth(1)
 	bar.borders = borders
 
-	-- Stand-still bar ----------------------------------------------------
 	local standBar = CreateFrame("StatusBar", nil, timerPart)
 	standBar:SetMinMaxValues(0, 1)
 	standBar:SetValue(0)
@@ -241,7 +229,6 @@ function ns.BuildBar()
 	local standOutline = Solid(timerPart, "BACKGROUND", -1)
 	bar.standOutline = standOutline
 
-	-- Texts --------------------------------------------------------------
 	local status = timerPart:CreateFontString(nil, "OVERLAY")
 	status:SetJustifyH("LEFT")
 	bar.statusText = status
@@ -317,10 +304,6 @@ function bar:SetLocked(locked)
 		self.frame:SetMovable(true)
 	end
 end
-
----------------------------------------------------------------------------
--- Layout (SPEC 5.4, 5.5, 5.6)
----------------------------------------------------------------------------
 
 function bar:ClearCache()
 	self.fillKey = nil
@@ -431,13 +414,11 @@ function bar:Layout()
 	end
 	self.fillKey = nil
 
-	-- track follows the bar
 	self.track:ClearAllPoints()
 	self.track:SetPoint("TOPLEFT", statusBar, "TOPLEFT", 0, 0)
 	self.track:SetPoint("BOTTOMRIGHT", statusBar, "BOTTOMRIGHT", 0, 0)
 	Tint(self.track, ns.Colour("track"))
 
-	-- zone and divider
 	self.zone:ClearAllPoints()
 	self.divider:ClearAllPoints()
 	if vertical then
@@ -472,7 +453,6 @@ function bar:Layout()
 	Tint(self.zone, ns.Colour("zone"))
 	self.zone:SetAlpha(1)
 
-	-- stand-still bar
 	standBar:ClearAllPoints()
 	self.standTrack:ClearAllPoints()
 	self.standTrack:SetPoint("TOPLEFT", standBar, "TOPLEFT", 0, 0)
@@ -497,7 +477,6 @@ function bar:Layout()
 	standBar:SetShown(db.showStandBar and true or false)
 	self.standOutline:SetShown(db.showStandBar and true or false)
 
-	-- borders
 	for _, texture in pairs(self.borders) do
 		texture:SetShown(db.showBorder and true or false)
 	end
@@ -508,7 +487,6 @@ function bar:Layout()
 
 	self.spark:SetShown(db.showSpark and true or false)
 
-	-- fonts
 	ApplyFont(self.statusText, fs)
 	ApplyFont(self.countdownText, fs)
 	ApplyFont(self.infoText, sfs)
@@ -516,7 +494,6 @@ function bar:Layout()
 	ApplyFont(self.rangeText, sfs)
 	SetTextColour(self.infoText, MUTED[1], MUTED[2], MUTED[3], MUTED[4])
 
-	-- text anchors
 	local status, countdown, info, ammoIcon, ammoText = self.statusText, self.countdownText, self.infoText, self.ammoIcon, self.ammoText
 	status:ClearAllPoints()
 	countdown:ClearAllPoints()
@@ -595,7 +572,6 @@ function bar:Layout()
 		self.rangeRowY = nil
 	end
 
-	-- range part anchors
 	local rangePart = self.parts.range.frame
 	rangePart:ClearAllPoints()
 	rangePart:SetSize(1, sfs)
@@ -623,10 +599,6 @@ function bar:Layout()
 	self.lastInfoWidth = nil
 	self:ClearCache()
 end
-
----------------------------------------------------------------------------
--- State computation
----------------------------------------------------------------------------
 
 local function CountdownText(left, decimals)
 	if not left then
@@ -673,7 +645,6 @@ local function AutoState(now, demo)
 
 	local shotTime, standStart, standLeft, progress, retryWait, grace = ns.StandStill(now, phase.cycle, phase.need)
 	state.shotTime, state.standStart, state.standLeft, state.standProgress = shotTime, standStart, standLeft, progress
-	-- A move in the last 0.1 s before the shot no longer stops it: no STOP then.
 	state.moving = ns.move.moving and not grace
 	state.known = ns.move.known
 	state.held = ns.range.held
@@ -709,7 +680,6 @@ local function AutoState(now, demo)
 		end
 	end
 
-	-- stand-still bar
 	if phase.phase == "late" then
 		if state.heldUp then
 			state.standProgress = 1
@@ -825,10 +795,6 @@ function bar:ComputeState(mode, now, demo)
 	return AutoState(now, demo)
 end
 
----------------------------------------------------------------------------
--- Painting
----------------------------------------------------------------------------
-
 function bar:SetFill(r, g, b, a)
 	local statusBar = self.statusBar
 	local db = ns.db
@@ -927,7 +893,6 @@ function bar:ApplyView(view, now, dt)
 	self.drawValue = view.value
 	self.drawR, self.drawG, self.drawB = view.r, view.g, view.b
 
-	-- status text
 	if db.showStatus and view.status then
 		SetText(status, view.status)
 		SetTextColour(status, view.r or 1, view.g or 1, view.b or 1, 1)
@@ -945,7 +910,6 @@ function bar:ApplyView(view, now, dt)
 		self.shownStatus = nil
 	end
 
-	-- countdown
 	if db.showCountdown and view.countdown then
 		SetText(countdown, view.countdown)
 		local r, g, b, a = ns.Colour("text")
@@ -1070,10 +1034,6 @@ function bar:BeginTransition(state)
 		oldCountdown = self.shownCountdown,
 	}
 end
-
----------------------------------------------------------------------------
--- Info line, ammo slot and range part
----------------------------------------------------------------------------
 
 local function InfoText(mode, demo)
 	local db = ns.db
@@ -1271,10 +1231,6 @@ function bar:UpdateRangePart(now, demo, timerAlpha, dt)
 	UpdateFade(part, true, dt)
 end
 
----------------------------------------------------------------------------
--- Per-frame update
----------------------------------------------------------------------------
-
 function bar:TimerVisible(mode, state, demo)
 	if demo then
 		return true
@@ -1364,10 +1320,6 @@ function ns.BarOnUpdate(elapsed)
 	bar:Update(now, dt)
 end
 
----------------------------------------------------------------------------
--- Hooks used by the options window
----------------------------------------------------------------------------
-
 function ns.SetDemo(open)
 	ns.demoActive = open and true or false
 	bar:SetLocked(not ns.demoActive)
@@ -1387,10 +1339,6 @@ function ns.ResetPosition()
 	ns.db.point = nil
 	ns.ApplyPosition()
 end
-
----------------------------------------------------------------------------
--- Events
----------------------------------------------------------------------------
 
 local function IsHunter()
 	if type(UnitClass) ~= "function" then
@@ -1435,7 +1383,6 @@ for _, event in ipairs(EVENT_LIST) do
 	Register(events, event)
 end
 
--- A jump out of Feign Death restarts the swing too (a post-hook: no taint).
 if type(hooksecurefunc) == "function" and type(JumpOrAscendStart) == "function" then
 	pcall(hooksecurefunc, "JumpOrAscendStart", function()
 		if ns.db and ns.OnFeignMove then
@@ -1535,10 +1482,6 @@ end
 events:SetScript("OnEvent", function(_, event, ...)
 	ns.OnEvent(event, ...)
 end)
-
----------------------------------------------------------------------------
--- Slash command
----------------------------------------------------------------------------
 
 local SLASH_COMMANDS = {
 	[""] = "toggle",

@@ -1,5 +1,3 @@
--- Hunter Swing Forever by Illusion
--- Unit 1: defaults, saved-variable merge and migration, choice lists, shared helpers.
 local ADDON, ns = ...
 
 ns.addonName = ADDON
@@ -58,13 +56,8 @@ local DEFAULTS = {
 }
 ns.DEFAULTS = DEFAULTS
 
--- How many saved measurements are kept, see SPEC 3.3.
 local MEASURE_MAX = 9
 local LOG_MAX = 40
-
----------------------------------------------------------------------------
--- Small shared helpers
----------------------------------------------------------------------------
 
 local function Copy(value)
 	if type(value) ~= "table" then
@@ -78,26 +71,28 @@ local function Copy(value)
 end
 ns.Copy = Copy
 
--- A secret client value must never be compared, used in arithmetic or trusted.
+local function EqualsWithoutError(value, expected)
+	return pcall(function()
+		return value == expected
+	end)
+end
+
 function ns.IsSecret(value)
 	local checker = rawget(_G, "issecretvalue")
 	if type(checker) ~= "function" then
 		return false
 	end
-	local ok, result = pcall(checker, value)
-	if not ok then
+	local checked, result = pcall(checker, value)
+	if not checked then
 		return true
 	end
-	local compared, secret = pcall(function()
-		return result == true
-	end)
-	if not compared then
+	local comparable, secret = EqualsWithoutError(result, true)
+	if not comparable then
 		return true
 	end
 	return secret
 end
 
--- A plain number, or nil when the value is missing, secret or not a number.
 function ns.PlainNumber(value)
 	if value == nil or ns.IsSecret(value) then
 		return nil
@@ -111,7 +106,6 @@ function ns.PlainNumber(value)
 	return value
 end
 
--- A plain boolean, or nil. `1` counts as true for the older returns.
 function ns.PlainTrue(value)
 	if value == nil or ns.IsSecret(value) then
 		return nil
@@ -125,7 +119,6 @@ function ns.PlainTrue(value)
 	return nil
 end
 
--- pcall that also tolerates a missing API.
 function ns.SafeCall(func, ...)
 	if type(func) ~= "function" then
 		return false, nil
@@ -133,7 +126,6 @@ function ns.SafeCall(func, ...)
 	return pcall(func, ...)
 end
 
--- Renders a client value the way the slash reports want it.
 function ns.Describe(value, ok, ...)
 	if not ok then
 		return "error: " .. tostring(value)
@@ -168,10 +160,6 @@ function ns.PrintLine(message)
 		DEFAULT_CHAT_FRAME:AddMessage("  " .. tostring(message))
 	end
 end
-
----------------------------------------------------------------------------
--- Choice lists (labels are the user-visible texts, values are saved)
----------------------------------------------------------------------------
 
 ns.FONTS = {
 	{ label = "2002 Bold", value = "Fonts\\2002B.ttf" },
@@ -275,10 +263,6 @@ function ns.FontPath(value)
 	return ns.FALLBACK_FONT
 end
 
----------------------------------------------------------------------------
--- Saved variables
----------------------------------------------------------------------------
-
 local function IsFiniteNumber(value)
 	return type(value) == "number" and value == value and value > -math.huge and value < math.huge
 end
@@ -303,7 +287,6 @@ local function CleanShotLog(list)
 	if type(list) == "table" then
 		for _, row in ipairs(list) do
 			if type(row) == "table" and IsFiniteNumber(row.t) then
-				-- 1.0.0 diagnostics: keep them when sane, drop a corrupted value.
 				if not (IsFiniteNumber(row.failed) and row.failed >= 0) then
 					row.failed = 0
 				end
@@ -365,15 +348,11 @@ function ns.LoadSaved()
 		db.vendorHorde = nil
 	end
 	if version < 5 then
-		-- The stand-still time now measures the wind-up after the game's retry, so the
-		-- samples taken by 1.0.0 are not comparable: drop them and learn again.
 		if type(db.calib) == "table" then
 			db.calib.stand = {}
 		end
 	end
 	if version < 6 then
-		-- 1.0.0 also learned from shots under Rapid Fire or Quick Shots, which pulled
-		-- the stand-still time down: learn again from unhasted shots only.
 		if type(db.calib) == "table" then
 			db.calib.stand = {}
 		end
@@ -394,7 +373,6 @@ function ns.LoadSaved()
 	ns.ResetMedian()
 end
 
--- "Reset all settings": measurements, shot log and bar position survive.
 function ns.ResetSaved()
 	local old = ns.db or {}
 	local keepPoint = old.point

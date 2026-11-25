@@ -1,5 +1,3 @@
--- Hunter Swing Forever by Illusion
--- Unit 2: the swing / shot timing model, movement tracking, latency, calibration and shot log.
 local ADDON, ns = ...
 
 local T = {
@@ -20,9 +18,9 @@ local T = {
 	RETRY = 0.5,
 	FAILURE_EARLY = 0.25,
 	FEIGN_ID = 5384,
-	FEIGN_EXTRA = 0.15, -- after Feign Death the swing restarts at the weapon's base speed + this
-	STOP_GRACE = 0.1, -- a move this close to the shot no longer stops it
-	STEADY_SHOTS = 20, -- swings whose haste ratio sets the unhasted reference
+	FEIGN_EXTRA = 0.15,
+	STOP_GRACE = 0.1,
+	STEADY_SHOTS = 20,
 	STEADY_TOLERANCE = 0.02,
 }
 ns.T = T
@@ -55,11 +53,11 @@ local timing = {
 	gaps = {},
 	failCount = 0,
 	failLast = nil,
-	ratio = 1, -- swing speed / weapon base speed, locked for the current swing
-	cycleStart = nil, -- the current swing can be restarted by a melee swing
-	cycleOverride = nil, -- a Feign Death reset runs one swing at the weapon's base speed
-	feignArmed = false, -- Feign Death cast: the next move or jump restarts the swing
-	ratios = {}, -- haste ratios of the last swings, to tell unhasted shots apart
+	ratio = 1,
+	cycleStart = nil,
+	cycleOverride = nil,
+	feignArmed = false,
+	ratios = {},
 	ratioItem = nil,
 }
 ns.timing = timing
@@ -73,7 +71,6 @@ local function Round3(value)
 	return math.floor(value * 1000 + 0.5) / 1000
 end
 
--- The three prediction rules, each with its own option (default on).
 local function RetryModel()
 	return not (ns.db and ns.db.retryModel == false)
 end
@@ -90,11 +87,6 @@ local function FeignResets()
 	return not (ns.db and ns.db.feignResetsRanged == false)
 end
 
-----------------------------------------------------------------------------
--- Diagnostics: an Auto Shot the game refused, and the weapon's own speed
-----------------------------------------------------------------------------
-
--- Counted per swing for the shot log only; nothing here feeds the prediction.
 local failed = CreateFrame("Frame")
 local function OnFailedQuiet(_, _, unit, _, spellID)
 	if unit ~= "player" then
@@ -110,9 +102,7 @@ end
 failed:SetScript("OnEvent", OnFailedQuiet)
 pcall(failed.RegisterEvent, failed, "UNIT_SPELLCAST_FAILED_QUIET")
 
--- The client's own word for "Speed" (SPEED is a Blizzard global string: "Vitesse",
--- "Tempo", "Velocidad"...), so a non-English tooltip is read too; English as fallback.
-local function SpeedLabels()
+local function LocalizedSpeedLabels()
 	local labels = { "Speed" }
 	local localized = rawget(_G, "SPEED")
 	if type(localized) == "string" and localized ~= "" and localized ~= "Speed" then
@@ -125,7 +115,7 @@ local function SpeedFromLines(lines)
 	if type(lines) ~= "table" then
 		return nil
 	end
-	local labels = SpeedLabels()
+	local labels = LocalizedSpeedLabels()
 	for _, line in ipairs(lines) do
 		if type(line) == "table" then
 			for _, key in ipairs({ "leftText", "rightText" }) do
@@ -146,7 +136,6 @@ local function SpeedFromLines(lines)
 	return nil
 end
 
--- The ranged weapon's own speed (the "Speed 2.80" line of its tooltip), or nil.
 local baseSpeed = { item = nil, speed = nil }
 
 function ns.WeaponBaseSpeed()
@@ -171,10 +160,6 @@ function ns.WeaponBaseSpeed()
 	end
 	return speed
 end
-
----------------------------------------------------------------------------
--- Movement
----------------------------------------------------------------------------
 
 function ns.ResetMovement(now)
 	move.moving = false
@@ -239,10 +224,6 @@ function ns.MovementKnown()
 	return move.known
 end
 
----------------------------------------------------------------------------
--- Latency
----------------------------------------------------------------------------
-
 function ns.UpdateLatency(now)
 	if now < nextPing then
 		return
@@ -261,17 +242,12 @@ function ns.UpdateLatency(now)
 	end
 end
 
----------------------------------------------------------------------------
--- The stand-still window and the learned stand-still time
----------------------------------------------------------------------------
-
 function ns.Window()
 	local extra = (ns.db and ns.db.windowExtra or 0) / 1000
 	local ping = (ns.db and ns.db.addPing) and ns.latency or 0
 	return math.max(T.MIN_WINDOW, ns.Windup() + ping + extra)
 end
 
--- The wind-up of the current swing: 0.5 s, shorter when ranged haste is on.
 function ns.Windup()
 	if not HasteWindup() then
 		return T.NEED
@@ -283,18 +259,14 @@ function ns.Windup()
 	return T.NEED * ratio
 end
 
--- When the game makes its next Auto Shot attempt for a player who stops at `stop`.
--- A refusal up to 0.25 s before the first attempt counts as that attempt.
 function ns.NextAttempt(firstAttempt, stop)
 	local last = timing.failLast
 	if last and last >= firstAttempt - T.FAILURE_EARLY then
-		-- Retries go on every 0.5 s from the last refusal, even when the client did
-		-- not report the later ones: the first retry at or after the stop.
-		local nextTry = last + T.RETRY
-		if stop and stop > nextTry then
-			nextTry = nextTry + math.ceil((stop - nextTry) / T.RETRY) * T.RETRY
+		local firstRetryAfterStop = last + T.RETRY
+		if stop and stop > firstRetryAfterStop then
+			firstRetryAfterStop = firstRetryAfterStop + math.ceil((stop - firstRetryAfterStop) / T.RETRY) * T.RETRY
 		end
-		return nextTry
+		return firstRetryAfterStop
 	end
 	if stop and stop > firstAttempt then
 		return firstAttempt + math.ceil((stop - firstAttempt) / T.RETRY) * T.RETRY
@@ -302,7 +274,6 @@ function ns.NextAttempt(firstAttempt, stop)
 	return firstAttempt
 end
 
--- Where the current swing counts from: a melee swing can restart it (rule 2).
 local function CycleOrigin(now)
 	return timing.cycleStart or timing.lastShot or now
 end
@@ -351,10 +322,6 @@ function ns.Need(demo)
 	return ns.Window(), false, count
 end
 
----------------------------------------------------------------------------
--- The phase of the current swing (SPEC 7.2)
----------------------------------------------------------------------------
-
 function ns.Phase(now, demo)
 	local cycle
 	local need
@@ -401,7 +368,6 @@ function ns.Phase(now, demo)
 	return info
 end
 
--- When the shot actually fires, and when the stand-still began (SPEC 7.6).
 function ns.StandStill(now, cycle, need, demo)
 	if demo then
 		return nil
@@ -409,8 +375,6 @@ function ns.StandStill(now, cycle, need, demo)
 	if not move.known or not move.stillSince then
 		return nil
 	end
-	-- A move that starts in the last tenth of a second before the shot does not stop
-	-- it (the server already has it): keep the prediction made while standing.
 	local grace = false
 	if move.moving then
 		if not move.movingSince or move.movingSince < move.stillSince then
@@ -429,8 +393,6 @@ function ns.StandStill(now, cycle, need, demo)
 	local start, shotTime
 	local pushed = false
 	if RetryModel() then
-		-- The game tries again every 0.5 s while the player is moving; the wind-up
-		-- only begins once an attempt lands.
 		local windup = ns.Windup()
 		local nextAttempt = ns.NextAttempt(origin + cycle - windup, move.stillSince)
 		pushed = nextAttempt > move.stillSince
@@ -457,10 +419,6 @@ function ns.StandStill(now, cycle, need, demo)
 	return shotTime, start, left, progress, pushed, grace
 end
 
----------------------------------------------------------------------------
--- Inputs
----------------------------------------------------------------------------
-
 local function KnownCode()
 	if move.events > 0 then
 		return 2
@@ -479,8 +437,6 @@ local function AppendShotLog(row)
 	end
 end
 
--- True when a swing ran without a temporary haste buff (Rapid Fire, Quick Shots...):
--- its ratio is the highest of the recent swings, i.e. the quiver and gear only.
 local function Unhasted(ratio)
 	if type(ratio) ~= "number" then
 		return true
@@ -509,6 +465,16 @@ local function RememberRatio(ratio)
 	end
 end
 
+local function HealUnreportedStop(now)
+	local shotFiredWhileMarkedMoving = timing.lastShot and move.moving and move.known
+	local noMovementEventSinceLastShot = move.events == timing.eventsAtShot
+	if shotFiredWhileMarkedMoving and noMovementEventSinceLastShot then
+		move.moving = false
+		move.stillSince = now
+		timing.moved = true
+	end
+end
+
 function ns.OnRangedSwing(duration)
 	local db = ns.db
 	if not db then
@@ -521,12 +487,7 @@ function ns.OnRangedSwing(duration)
 		speed = reported
 	end
 
-	-- A shot can not fire while moving: heal a stop event the client swallowed.
-	if timing.lastShot and move.moving and move.known and move.events == timing.eventsAtShot then
-		move.moving = false
-		move.stillSince = now
-		timing.moved = true
-	end
+	HealUnreportedStop(now)
 
 	local previous = timing.lastShot
 	local previousSpeed = timing.speed
@@ -535,7 +496,6 @@ function ns.OnRangedSwing(duration)
 	local previousUnhasted = Unhasted(timing.lastRatio)
 	local gap = previous and (now - previous) or nil
 
-	-- Learn from the swing that just ended (SPEC 7.5).
 	if previous and previousSpeed and not timing.broken and not timing.heldUp
 		and #timing.haste == 0 and not ns.demoActive and previousUnhasted
 		and move.known and not move.moving and move.stillSince and gap then
@@ -543,7 +503,6 @@ function ns.OnRangedSwing(duration)
 		local stopBefore = (previous + previousSpeed) - move.stillSince
 		local measured
 		if RetryModel() then
-			-- Measure the wind-up as the game applies it: a retry can push the start.
 			local firstAttempt = previous + previousSpeed - previousWindup
 			measured = now - math.max(move.stillSince, ns.NextAttempt(firstAttempt, move.stillSince))
 		else
@@ -559,7 +518,6 @@ function ns.OnRangedSwing(duration)
 		end
 	end
 
-	-- Gap memory for the /hsf timing report.
 	if gap then
 		timing.gaps[#timing.gaps + 1] = {
 			gap = gap,
@@ -585,7 +543,6 @@ function ns.OnRangedSwing(duration)
 	if base and base > 0 and speed and speed > 0 then
 		hasteRatio = Round3(speed / base)
 	end
-	-- Locked for the swing that starts now: the wind-up follows this ratio.
 	timing.ratio = hasteRatio or 1
 	timing.lastRatio = hasteRatio
 	RememberRatio(hasteRatio)
@@ -632,15 +589,12 @@ function ns.OnMeleeSwing(duration)
 		timing.meleeSpeed = reported
 	end
 	timing.broken = true
-	-- A melee swing restarts the Auto Shot swing from the melee swing time.
 	if MeleeResets() and timing.speed then
 		timing.cycleStart = now
 		timing.cycleOverride = nil
 	end
 end
 
--- Feign Death: the next move or jump restarts the Auto Shot swing, unhasted, at the
--- weapon's base speed + 0.15 s (the rule WeaponSwingTimer uses on Forever).
 function ns.OnSpellSucceeded(spellID)
 	if ns.PlainNumber(spellID) == T.FEIGN_ID and FeignResets() then
 		timing.feignArmed = true
@@ -699,10 +653,6 @@ function ns.MeleeActive(now)
 	return false
 end
 
----------------------------------------------------------------------------
--- Reports (SPEC 4.2, 4.3)
----------------------------------------------------------------------------
-
 function ns.ReportMovement()
 	ns.Print("Movement (run it standing, then while running):")
 	ns.PrintLine("GetUnitSpeed = " .. ns.DescribeCall(GetUnitSpeed, "player"))
@@ -742,7 +692,6 @@ function ns.ReportTiming()
 		end
 	end
 
-	-- Diagnostics added with 1.0.0: refused tries and the haste ratio seen (never used above).
 	local log = ns.db.shotLog or {}
 	local failedShots, agoSum, agoCount = 0, 0, 0
 	local low, high

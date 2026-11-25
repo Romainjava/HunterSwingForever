@@ -1,5 +1,3 @@
--- Hunter Swing Forever by Illusion
--- Unit 7: ammo vendor pins on the world map and the minimap.
 local ADDON, ns = ...
 
 local PIN_TEMPLATE = "HunterSwingForeverPinTemplate"
@@ -29,10 +27,6 @@ local function ReportError(what, message)
 	reported[what .. text] = true
 	ns.Print("Ammo vendor " .. what .. " pins failed: " .. text)
 end
-
----------------------------------------------------------------------------
--- Map helpers
----------------------------------------------------------------------------
 
 local function MapInfo(mapID)
 	local func = C_Map and C_Map.GetMapInfo
@@ -182,10 +176,6 @@ function ns.VisibleVendors()
 	return out
 end
 
----------------------------------------------------------------------------
--- Waypoints and chat
----------------------------------------------------------------------------
-
 function ns.SetWaypoint(mapID, x, y)
 	local canSet = C_Map and C_Map.CanSetUserWaypointOnMap
 	if type(canSet) == "function" then
@@ -227,10 +217,6 @@ function ns.TryWaypoint(vendor)
 		ns.Print(string.format("%s is at %.1f, %.1f in %s.", vendor.name, x, y, zone))
 	end
 end
-
----------------------------------------------------------------------------
--- The pin itself
----------------------------------------------------------------------------
 
 function ns.SetupPin(pin)
 	pin.SetPassThroughButtons = function() end
@@ -385,10 +371,6 @@ function HunterSwingForever_PinOnLeave(pin)
 	end
 	ns.HidePinTooltip()
 end
-
----------------------------------------------------------------------------
--- World map data provider
----------------------------------------------------------------------------
 
 local pending = false
 
@@ -623,10 +605,6 @@ function ns.RefreshPins()
 		ScheduleWorldMapBuild()
 	end
 end
-
----------------------------------------------------------------------------
--- Minimap pins
----------------------------------------------------------------------------
 
 local mini = {
 	pins = {},

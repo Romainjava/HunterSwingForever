@@ -1,5 +1,3 @@
--- Hunter Swing Forever by Illusion
--- Unit 5: ammo left (count, percentage, colour) and the equipped ammo kind.
 local ADDON, ns = ...
 
 local ammo = {

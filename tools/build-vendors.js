@@ -1,10 +1,4 @@
-// Generates VendorData.lua from data/vendors.json.
-// Usage: node tools/build-vendors.js  (or bun tools/build-vendors.js)
-//
-// Sources of the data:
-//   - pfQuest database (MIT, Copyright (c) 2017-2021 Eric Mauser (Shagu))
-//   - Wowhead Classic, for which NPCs sell ammo
-//   - positions corrected for WoW Forever
+// pfQuest database, MIT licence, Copyright (c) 2017-2021 Eric Mauser (Shagu)
 "use strict";
 
 const fs = require("fs");
@@ -45,13 +39,7 @@ function number(value) {
 }
 
 const lines = [];
-lines.push("-- Hunter Swing Forever by Illusion");
-lines.push("-- GENERATED FILE, do not edit by hand: run `node tools/build-vendors.js`.");
-lines.push("--");
-lines.push("-- Sources:");
-lines.push("--   pfQuest database, MIT licence, Copyright (c) 2017-2021 Eric Mauser (Shagu)");
-lines.push("--   Wowhead Classic: which NPCs sell ammo");
-lines.push("--   positions corrected for WoW Forever");
+lines.push("-- pfQuest database, MIT licence, Copyright (c) 2017-2021 Eric Mauser (Shagu)");
 lines.push("local ADDON, ns = ...");
 lines.push("");
 lines.push("ns.vendorItems = {");

@@ -1,10 +1,4 @@
--- Hunter Swing Forever by Illusion
--- GENERATED FILE, do not edit by hand: run `node tools/build-vendors.js`.
---
--- Sources:
---   pfQuest database, MIT licence, Copyright (c) 2017-2021 Eric Mauser (Shagu)
---   Wowhead Classic: which NPCs sell ammo
---   positions corrected for WoW Forever
+-- pfQuest database, MIT licence, Copyright (c) 2017-2021 Eric Mauser (Shagu)
 local ADDON, ns = ...
 
 ns.vendorItems = {
