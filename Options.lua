@@ -5,7 +5,7 @@ local options = {
 }
 ns.options = options
 
-local COLUMN_WIDTH = 270
+local COLUMN_WIDTH = 276
 
 local function AttachTooltip(widget, titleText, bodyText)
 	if not bodyText then
@@ -20,7 +20,9 @@ local function AttachTooltip(widget, titleText, bodyText)
 			return
 		end
 		tip:SetOwner(self, "ANCHOR_RIGHT")
-		tip:AddLine(titleText, 1, 1, 1)
+		if titleText then
+			tip:AddLine(titleText, 1, 1, 1)
+		end
 		tip:AddLine(bodyText, nil, nil, nil, true)
 		tip:Show()
 	end)
@@ -80,30 +82,63 @@ local function AddSlider(parent, x, y, labelText, key, minValue, maxValue, step,
 		return tostring(math.floor(value + 0.5)) .. (suffix or "")
 	end
 
-	local slider, valueText
-	local ok, created = pcall(CreateFrame, "Slider", nil, parent, "MinimalSliderWithSteppersTemplate")
-	if ok and created then
-		slider = created
-		slider:SetPoint("TOPLEFT", parent, "TOPLEFT", x - 4, y - 14)
-		slider:SetSize(230, 20)
-		valueText = slider.Text
+	local function Apply(value)
+		local snapped = math.floor(value / step + 0.5) * step
+		if ns.db[key] ~= snapped then
+			ns.db[key] = snapped
+			ns.OnSettingChanged()
+		end
+		return snapped
 	end
-	if not slider then
+
+	local okModern, modern = pcall(CreateFrame, "Frame", nil, parent, "MinimalSliderWithSteppersTemplate")
+	if okModern and modern and type(modern.Init) == "function" and _G.MinimalSliderWithSteppersMixin then
+		local mixin = _G.MinimalSliderWithSteppersMixin
+		modern:SetPoint("TOPLEFT", parent, "TOPLEFT", x - 4, y - 14)
+		modern:SetSize(COLUMN_WIDTH - 44, 20)
+		local initial = type(ns.db[key]) == "number" and ns.db[key] or minValue
+		local formatters = mixin.Label and mixin.Label.Right and { [mixin.Label.Right] = Format } or nil
+		modern:Init(initial, minValue, maxValue, (maxValue - minValue) / step, formatters)
+		if type(modern.RegisterCallback) == "function" and mixin.Event and mixin.Event.OnValueChanged then
+			modern:RegisterCallback(mixin.Event.OnValueChanged, function(_, value)
+				if modern.hsfUpdating then
+					return
+				end
+				Apply(value)
+			end, modern)
+		end
+		modern.Refresh = function()
+			local value = type(ns.db[key]) == "number" and ns.db[key] or minValue
+			modern.hsfUpdating = true
+			modern:SetValue(value)
+			modern.hsfUpdating = false
+		end
+		options.refreshers[#options.refreshers + 1] = modern.Refresh
+		return modern
+	end
+	if okModern and modern and type(modern.Hide) == "function" then
+		modern:Hide()
+	end
+
+	local valueText = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+	valueText:SetPoint("TOPRIGHT", parent, "TOPLEFT", x + COLUMN_WIDTH - 4, y)
+	valueText:SetJustifyH("RIGHT")
+
+	local okClassic, slider = pcall(CreateFrame, "Slider", nil, parent, "OptionsSliderTemplate")
+	if not (okClassic and slider) then
 		slider = CreateFrame("Slider", nil, parent)
-		slider:SetPoint("TOPLEFT", parent, "TOPLEFT", x + 2, y - 18)
-		slider:SetSize(210, 16)
-		slider:SetOrientation("HORIZONTAL")
-		if slider.Low then
-			slider.Low:SetText("")
-		end
-		if slider.High then
-			slider.High:SetText("")
-		end
-		if slider.Text then
-			slider.Text:SetText("")
-		end
-		valueText = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-		valueText:SetPoint("LEFT", slider, "RIGHT", 10, 0)
+	end
+	slider:SetPoint("TOPLEFT", parent, "TOPLEFT", x + 2, y - 16)
+	slider:SetSize(COLUMN_WIDTH - 8, 16)
+	slider:SetOrientation("HORIZONTAL")
+	if slider.Low then
+		slider.Low:SetText("")
+	end
+	if slider.High then
+		slider.High:SetText("")
+	end
+	if slider.Text then
+		slider.Text:SetText("")
 	end
 
 	slider:SetMinMaxValues(minValue, maxValue)
@@ -114,43 +149,32 @@ local function AddSlider(parent, x, y, labelText, key, minValue, maxValue, step,
 		slider:SetObeyStepOnDrag(true)
 	end
 
-	local function ShowValue(value)
-		if valueText then
-			valueText:SetText(Format(value))
-		end
-	end
-
 	slider:SetScript("OnValueChanged", function(self, value)
 		if self.hsfUpdating then
 			return
 		end
-		local snapped = math.floor(value / step + 0.5) * step
-		if self.hsfLast == snapped then
-			return
-		end
-		self.hsfLast = snapped
-		ns.db[key] = snapped
-		ShowValue(snapped)
-		ns.OnSettingChanged()
+		local snapped = Apply(value)
+		valueText:SetText(Format(snapped))
 	end)
 
 	slider.Refresh = function()
-		local value = ns.db[key]
-		if type(value) ~= "number" then
-			value = minValue
-		end
+		local value = type(ns.db[key]) == "number" and ns.db[key] or minValue
 		slider.hsfUpdating = true
 		slider:SetValue(value)
 		slider.hsfUpdating = false
-		slider.hsfLast = value
-		ShowValue(value)
+		valueText:SetText(Format(value))
 	end
 	options.refreshers[#options.refreshers + 1] = slider.Refresh
-	AttachTooltip(slider, labelText)
 	return slider
 end
 
-local function AddStepper(parent, x, y, key, list)
+local function AddStepper(parent, x, y, labelText, key, list)
+	if labelText then
+		local title = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		title:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+		title:SetText(labelText)
+	end
+
 	local prev = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
 	prev:SetSize(28, 22)
 	prev:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y - 15)
@@ -158,12 +182,12 @@ local function AddStepper(parent, x, y, key, list)
 
 	local next = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
 	next:SetSize(28, 22)
-	next:SetPoint("TOPLEFT", parent, "TOPLEFT", x + 242, y - 15)
+	next:SetPoint("TOPLEFT", parent, "TOPLEFT", x + COLUMN_WIDTH - 28, y - 15)
 	next:SetText(">")
 
 	local label = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	label:SetPoint("TOP", parent, "TOPLEFT", x + 135, y - 20)
-	label:SetWidth(200)
+	label:SetPoint("TOP", parent, "TOPLEFT", x + COLUMN_WIDTH / 2, y - 20)
+	label:SetWidth(COLUMN_WIDTH - 64)
 	label:SetJustifyH("CENTER")
 
 	local function Show()
@@ -192,19 +216,25 @@ local function AddStepper(parent, x, y, key, list)
 	return label
 end
 
-local function AddChoice(parent, x, y, key, list, tooltip)
+local function AddChoice(parent, x, y, labelText, key, list, tooltip)
 	local dropdown
 	local ok, created = pcall(CreateFrame, "DropdownButton", nil, parent, "WowStyle1DropdownTemplate")
 	if ok and created then
 		dropdown = created
 	end
 	if not dropdown then
-		AddStepper(parent, x, y, key, list)
+		AddStepper(parent, x, y, labelText, key, list)
 		return
 	end
 
-	dropdown:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y - 16)
-	dropdown:SetSize(260, 32)
+	if labelText then
+		local title = parent:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+		title:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+		title:SetText(labelText)
+	end
+
+	dropdown:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y - 15)
+	dropdown:SetSize(COLUMN_WIDTH - 6, 26)
 
 	local function Show()
 		dropdown:SetText(ns.ChoiceLabel(list, ns.db[key]), nil, 1, 1, 1)
@@ -230,7 +260,7 @@ local function AddChoice(parent, x, y, key, list, tooltip)
 	end
 	options.refreshers[#options.refreshers + 1] = refresh
 	Show()
-	AttachTooltip(dropdown, nil, tooltip)
+	AttachTooltip(dropdown, labelText, tooltip)
 	return dropdown
 end
 
@@ -326,8 +356,8 @@ local function AddSwatch(parent, x, y, labelText, key, withAlpha)
 	return button
 end
 
-local function TryCreateFrame(template)
-	if template then
+local function TryCreateFrame(templates)
+	for _, template in ipairs(templates) do
 		local ok, frame = pcall(CreateFrame, "Frame", "HunterSwingForeverOptions", UIParent, template)
 		if ok and frame then
 			return frame
@@ -341,14 +371,14 @@ local function BuildWindow()
 		return options.frame
 	end
 
-	local frame = TryCreateFrame("DefaultPanelFlatTemplate")
+	local frame = TryCreateFrame({ "DefaultPanelFlatTemplate", "BasicFrameTemplateWithInset" })
 	if not (frame.NineSlice or frame.Bg or frame.Inset) then
 		frame = CreateFrame("Frame", "HunterSwingForeverOptions", UIParent)
 	end
 	options.frame = frame
 
-	frame:SetSize(890, 580)
-	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 120)
+	frame:SetSize(916, 622)
+	frame:SetPoint("CENTER", UIParent, "CENTER", 0, 80)
 	frame:SetFrameStrata("DIALOG")
 	frame:SetToplevel(true)
 	frame:SetClampedToScreen(true)
@@ -373,17 +403,22 @@ local function BuildWindow()
 		end
 	end
 
-	if frame.TitleText then
-		frame.TitleText:SetText("Hunter Swing Forever")
+	local title = "Hunter Swing Forever"
+	if type(frame.SetTitle) == "function" then
+		frame:SetTitle(title)
+	elseif frame.TitleContainer and frame.TitleContainer.TitleText then
+		frame.TitleContainer.TitleText:SetText(title)
+	elseif frame.TitleText then
+		frame.TitleText:SetText(title)
 	else
-		local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-		title:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -14)
-		title:SetText("Hunter Swing Forever")
+		local fs = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+		fs:SetPoint("TOP", frame, "TOP", 0, -5)
+		fs:SetText(title)
 	end
 
 	if not frame.CloseButton then
 		local close = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
-		close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -4, -4)
+		close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
 	end
 
 	local escapeList = _G.UISpecialFrames
@@ -397,7 +432,7 @@ local function BuildWindow()
 
 	local resetPosition = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 	resetPosition:SetSize(120, 22)
-	resetPosition:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 16, 14)
+	resetPosition:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 18, 14)
 	resetPosition:SetText("Reset position")
 	resetPosition:SetScript("OnClick", function()
 		ns.ResetPosition()
@@ -406,7 +441,7 @@ local function BuildWindow()
 
 	local resetAll = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 	resetAll:SetSize(140, 22)
-	resetAll:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 144, 14)
+	resetAll:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 146, 14)
 	resetAll:SetText("Reset all settings")
 	resetAll:SetScript("OnClick", function()
 		ns.ResetSaved()
@@ -418,7 +453,7 @@ local function BuildWindow()
 
 	local done = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 	done:SetSize(90, 22)
-	done:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -16, 14)
+	done:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -18, 14)
 	done:SetText("Done")
 	done:SetScript("OnClick", function()
 		frame:Hide()
@@ -429,74 +464,83 @@ local function BuildWindow()
 	hint:SetText("Drag the bar to move it while this window is open.")
 
 	local function NewColumn(x)
-		return { frame = frame, x = x, y = -34 }
+		return { frame = frame, x = x, y = -36 }
 	end
 
-	local function Heading(column, text, extra)
+	local function Space(column, amount)
+		column.y = column.y - amount
+	end
+
+	local function Heading(column, text)
 		AddHeading(column.frame, column.x, column.y, text)
-		column.y = column.y - (extra or 30)
+		column.y = column.y - 26
 	end
 
 	local function CheckRow(column, firstKey, firstLabel, firstTip, secondKey, secondLabel, secondTip)
-		AddCheckbox(column.frame, column.x, column.y - 4, firstLabel, firstKey, firstTip)
+		AddCheckbox(column.frame, column.x, column.y, firstLabel, firstKey, firstTip)
 		if secondKey then
-			AddCheckbox(column.frame, column.x + 135, column.y - 4, secondLabel, secondKey, secondTip)
+			AddCheckbox(column.frame, column.x + 140, column.y, secondLabel, secondKey, secondTip)
 		end
 		column.y = column.y - 24
 	end
 
 	local function Slider(column, key, label, minValue, maxValue, step, suffix)
 		AddSlider(column.frame, column.x, column.y, label, key, minValue, maxValue, step, suffix)
-		column.y = column.y - 36
+		column.y = column.y - 40
 	end
 
-	local function Choice(column, key, list, tooltip)
-		AddChoice(column.frame, column.x, column.y, key, list, tooltip)
-		column.y = column.y - 38
+	local function Choice(column, label, key, list, tooltip)
+		AddChoice(column.frame, column.x, column.y, label, key, list, tooltip)
+		column.y = column.y - 46
 	end
 
 	local function Swatches(column, firstKey, firstLabel, firstAlpha, secondKey, secondLabel, secondAlpha)
 		AddSwatch(column.frame, column.x, column.y, firstLabel, firstKey, firstAlpha)
 		if secondKey then
-			AddSwatch(column.frame, column.x + 135, column.y, secondLabel, secondKey, secondAlpha)
+			AddSwatch(column.frame, column.x + 140, column.y, secondLabel, secondKey, secondAlpha)
 		end
-		column.y = column.y - 24
+		column.y = column.y - 26
 	end
 
-	local left = NewColumn(16)
+	local left = NewColumn(18)
 	Heading(left, "Layout & size")
-	Choice(left, "layout", ns.LAYOUTS)
+	Choice(left, "Layout", "layout", ns.LAYOUTS)
 	Slider(left, "width", "Length", 100, 500, 5)
 	Slider(left, "barHeight", "Thickness", 4, 40, 1)
 	Slider(left, "opacity", "Opacity", 20, 100, 5, "%")
 	Slider(left, "windowExtra", "Stand-still window adjust", -200, 300, 10, " ms")
+	Space(left, 6)
 	Heading(left, "Timing")
 	CheckRow(left, "addPing", "Add my ping to the window", "Your 'stopped moving' reaches the server one ping later, so the red window grows by your world latency. Used until the addon has measured your real stand-still time on a few shots.")
 	CheckRow(left, "retryModel", "0.5 s retry", "A shot refused because you were still moving is tried again 0.5 s later: the bar waits for that retry instead of predicting a shot you cannot make.",
 		"hasteWindup", "Haste wind-up", "Rapid Fire and Quick Shots shorten the 0.5 s wind-up, so the red window and the learned stand-still time shrink with it.")
-	CheckRow(left, "meleeResetsRanged", "Melee restarts the timer", "A main-hand or off-hand swing starts a new Auto Shot swing, so the bar counts from that swing instead of waiting on a late shot.",
-		"feignResetsRanged", "Feign Death restarts", "Casting Feign Death restarts the Auto Shot swing.")
+	CheckRow(left, "meleeResetsRanged", "Melee restarts the timer", "A main-hand or off-hand swing starts a new Auto Shot swing, so the bar counts from that swing instead of waiting on a late shot.")
+	CheckRow(left, "feignResetsRanged", "Feign Death restarts the timer", "Casting Feign Death restarts the Auto Shot swing.")
+	Space(left, 8)
 	Heading(left, "Ammo vendors on the map")
 	CheckRow(left, "vendorPins", "World map", "Every NPC that sells arrows or bullets, coloured by faction. Hover for what they sell, click for a waypoint.",
 		"vendorMinimap", "Minimap", "The same vendors on the minimap when they are near you. Hidden in combat. Click one for a waypoint.")
 	CheckRow(left, "vendorContinent", "Continent maps", "Also show them, smaller, on Kalimdor and the Eastern Kingdoms.",
 		"vendorNeutral", "|cffffd140Neutral|r", "Goblin towns, Argent Dawn, Cenarion Circle and the like: open to both sides.")
 	CheckRow(left, "vendorOtherFaction", "Other faction", "Also show the other side's vendors. They will not sell to you. Your own side is always shown.")
-	Choice(left, "vendorAmmo", ns.VENDOR_AMMO_MODES)
+	Space(left, 4)
+	Choice(left, "Ammo type", "vendorAmmo", ns.VENDOR_AMMO_MODES)
 
-	local middle = NewColumn(310)
+	local middle = NewColumn(320)
 	Heading(middle, "Text")
-	Choice(middle, "font", ns.FONTS)
-	Choice(middle, "outline", ns.OUTLINES)
+	Choice(middle, "Font", "font", ns.FONTS)
+	Choice(middle, "Style", "outline", ns.OUTLINES)
 	Slider(middle, "fontSize", "Font size", 8, 28, 1)
 	Slider(middle, "smallFontSize", "Small font size (info, range)", 6, 20, 1)
+	Space(middle, 10)
 	Heading(middle, "Colors")
 	Swatches(middle, "move", "Move", false, "stand", "Stand still", false)
 	Swatches(middle, "zone", "Window", true, "track", "Background", true)
 	Swatches(middle, "text", "Countdown", false, "melee", "Melee", false)
-	Choice(middle, "texture", ns.TEXTURES)
+	Space(middle, 8)
+	Choice(middle, "Bar texture", "texture", ns.TEXTURES)
 
-	local right = NewColumn(604)
+	local right = NewColumn(622)
 	Heading(right, "Show")
 	CheckRow(right, "showStatus", "Status text", "MOVE / STAND STILL / STOP.", "showCountdown", "Countdown", "Seconds left in the current phase.")
 	CheckRow(right, "showSpeed", "Weapon speed", "Your ranged speed from the last shot, haste included.",
@@ -505,14 +549,17 @@ local function BuildWindow()
 	CheckRow(right, "showBorder", "Border", nil, "gradient", "Gradient fill", nil)
 	CheckRow(right, "showMelee", "Melee & too close", "In melee range the bar stays up: while you swing it times your melee swings (MELEE, handy for Raptor Strike); otherwise it tells you to back off (TOO CLOSE).",
 		"showStandBar", "Stand-still bar", "A slim second bar under the main one. Red: stand still; it fills from the moment you must stand (or the moment you stop, if you stop late) and is full as the arrow or bullet leaves. Then it turns solid green: the shot is away, move. Grey once you are moving. The time is measured on your own shots; /hsf timing shows it. Colours follow Move and Stand still.")
-	Choice(right, "ammoDisplay", ns.AMMO_MODES)
-	Heading(right, "Range check", 52)
+	Space(right, 6)
+	Choice(right, "Ammo", "ammoDisplay", ns.AMMO_MODES)
+	Space(right, 10)
+	Heading(right, "Range check")
 	CheckRow(right, "rangeEnabled", "Enabled", "In range / Too close (dead zone) / Out of range for a hostile target.",
 		"rangeText", "Show text", "In range / Too close / Out of range. Off: only the coloured dot and the distance.")
 	CheckRow(right, "rangeCombatOnly", "Only in combat", nil,
 		"rangeWhenIdle", "When not shooting", "Also show it while Auto Shot is off, so you can check before you pull.")
-	Choice(right, "rangePosition", ns.RANGE_POSITIONS)
-	Choice(right, "rangeDistance", ns.DISTANCE_MODES)
+	Space(right, 6)
+	Choice(right, "Position", "rangePosition", ns.RANGE_POSITIONS)
+	Choice(right, "Distance", "rangeDistance", ns.DISTANCE_MODES)
 
 	function frame:Refresh()
 		for _, refresh in ipairs(options.refreshers) do
